@@ -84,10 +84,10 @@ pub fn clean_stale(max_age: i64) -> Result<(), Error> {
             };
             let now = Utc::now().timestamp();
             if now - key.timestamp() > max_age {
-                if fs::remove_file(&file_path).is_err() {
+                let err = fs::remove_file(&file_path).is_err();
+                if err {
                     return Err(Error::Inaccessible);
                 }
-                println!("Deleted {}, since it was stale", &file_path.display());
             }
         }
     }
