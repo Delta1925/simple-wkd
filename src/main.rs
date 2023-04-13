@@ -27,7 +27,7 @@ struct Pem {
 
 #[derive(Deserialize, Debug)]
 struct Token {
-    data: String,
+    value: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -63,7 +63,7 @@ async fn submit(pem: web::Form<Pem>) -> Result<String> {
 
 #[get("/api/confirm/{data}")]
 async fn confirm(token: web::Path<Token>) -> Result<String> {
-    confirm_action(&token.data)?;
+    confirm_action(&token.value)?;
     Ok(String::from("Confirmation successfull!"))
 }
 

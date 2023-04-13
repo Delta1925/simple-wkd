@@ -13,9 +13,9 @@ macro_rules! pending_path {
     };
 }
 
-pub fn parse_pem(data: &str) -> Result<Cert, Error> {
-    match sequoia_openpgp::Cert::from_bytes(data.as_bytes()) {
-        Ok(data) => Ok(data),
+pub fn parse_pem(pemfile: &str) -> Result<Cert, Error> {
+    match sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()) {
+        Ok(cert) => Ok(cert),
         Err(_) => Err(Error::ParseCert),
     }
 }
@@ -26,24 +26,27 @@ pub fn gen_random_token() -> String {
 }
 
 pub fn get_email_from_cert(cert: &Cert) -> Result<String, Error> {
-    match cert.userids().next() {
-        Some(data) => match data.email() {
-            Ok(data) => match data {
-                Some(data) => Ok(data),
-                None => Err(Error::MissingMail),
-            },
-            Err(_) => Err(Error::ParseMail),
-        },
-        None => Err(Error::ParseCert),
+    let userid_opt = match cert.userids().next() {
+        Some(userid_opt) => userid_opt,
+        None => return Err(Error::ParseCert),
+    };
+    let email_opt = match userid_opt.email() {
+        Ok(email_opt) => email_opt,
+        Err(_) => return Err(Error::ParseMail),
+    };
+    match email_opt {
+        Some(email) => Ok(email),
+        None => Err(Error::MissingMail),
     }
 }
 
 pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
-    match Url::from(email) {
-        Ok(data) => match data.to_file_path(VARIANT) {
-            Ok(data) => Ok(data),
-            Err(_) => Err(Error::ParseMail),
-        },
+    let wkd_url = match Url::from(email) {
+        Ok(wkd_url) => wkd_url,
+        Err(_) => return Err(Error::ParseMail),
+    };
+    match wkd_url.to_file_path(VARIANT) {
+        Ok(path) => Ok(path),
         Err(_) => Err(Error::ParseMail),
     }
 }

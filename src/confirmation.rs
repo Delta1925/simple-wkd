@@ -9,15 +9,15 @@ use std::path::Path;
 
 pub fn confirm_action(token: &str) -> Result<(), Error> {
     let pending_path = pending_path!().join(token);
-    let data = if pending_path.exists() {
+    let content = if pending_path.exists() {
         match fs::read_to_string(&pending_path) {
-            Ok(data) => data,
+            Ok(content) => content,
             Err(_) => return Err(Error::Inaccessible),
         }
     } else {
         return Err(Error::MissingPath);
     };
-    let key = match serde_json::from_str::<Pending>(&data) {
+    let key = match serde_json::from_str::<Pending>(&content) {
         Ok(key) => key,
         Err(_) => return Err(Error::ParseStored),
     };

@@ -48,24 +48,25 @@ impl Pending {
 }
 
 fn store_pending(pending: &Pending, token: &str) -> Result<(), Error> {
-    match serde_json::to_string(pending) {
-        Ok(serialized) => match fs::write(pending_path!().join(token), serialized) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(Error::Inaccessible),
-        },
-        Err(_) => Err(Error::SerializeData),
+    let serialized = match serde_json::to_string(pending) {
+        Ok(serialized) => serialized,
+        Err(_) => return Err(Error::SerializeData),
+    };
+    match fs::write(pending_path!().join(token), serialized) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(Error::Inaccessible),
     }
 }
 
 pub fn store_pending_addition(pem: String, token: &str) -> Result<(), Error> {
-    let data = Pending::build_add(pem);
-    store_pending(&data, token)?;
+    let pending = Pending::build_add(pem);
+    store_pending(&pending, token)?;
     Ok(())
 }
 
 pub fn store_pending_deletion(email: String, token: &str) -> Result<(), Error> {
-    let data = Pending::build_delete(email);
-    store_pending(&data, token)?;
+    let pending = Pending::build_delete(email);
+    store_pending(&pending, token)?;
     Ok(())
 }
 
@@ -73,23 +74,20 @@ pub fn clean_stale(max_age: i64) -> Result<(), Error> {
     for path in fs::read_dir(pending_path!()).unwrap().flatten() {
         let file_path = path.path();
         if file_path.exists() {
-            match fs::read_to_string(&file_path) {
-                Ok(data) => match serde_json::from_str::<Pending>(&data) {
-                    Ok(key) => {
-                        let now = Utc::now().timestamp();
-                        if now - key.timestamp() > max_age {
-                            if fs::remove_file(&file_path).is_err() {
-                                return Err(Error::Inaccessible);
-                            }
-                            println!(
-                                "Deleted {}, since it was stale",
-                                &file_path.to_str().unwrap()
-                            );
-                        }
-                    }
-                    Err(_) => return Err(Error::DeserializeData),
-                },
+            let content = match fs::read_to_string(&file_path) {
+                Ok(content) => content,
                 Err(_) => return Err(Error::Inaccessible),
+            };
+            let key = match serde_json::from_str::<Pending>(&content) {
+                Ok(key) => key,
+                Err(_) => return Err(Error::DeserializeData),
+            };
+            let now = Utc::now().timestamp();
+            if now - key.timestamp() > max_age {
+                if fs::remove_file(&file_path).is_err() {
+                    return Err(Error::Inaccessible);
+                }
+                println!("Deleted {}, since it was stale", &file_path.display());
             }
         }
     }
