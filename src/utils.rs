@@ -32,7 +32,7 @@ pub fn get_email_from_cert(cert: &Cert) -> Result<String, Error> {
     };
     let email_opt = match userid_opt.email() {
         Ok(email_opt) => email_opt,
-        Err(_) => return Err(Error::ParseMail),
+        Err(_) => return Err(Error::ParseCert),
     };
     match email_opt {
         Some(email) => Ok(email),
@@ -43,11 +43,11 @@ pub fn get_email_from_cert(cert: &Cert) -> Result<String, Error> {
 pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
     let wkd_url = match Url::from(email) {
         Ok(wkd_url) => wkd_url,
-        Err(_) => return Err(Error::ParseMail),
+        Err(_) => return Err(Error::PathGeneration),
     };
     match wkd_url.to_file_path(VARIANT) {
         Ok(path) => Ok(path),
-        Err(_) => Err(Error::ParseMail),
+        Err(_) => Err(Error::PathGeneration),
     }
 }
 

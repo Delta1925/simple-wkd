@@ -63,7 +63,7 @@ async fn submit(pem: web::Form<Pem>) -> Result<String> {
     Ok(String::from("Key submitted successfully!"))
 }
 
-#[get("/api/confirm/{data}")]
+#[get("/api/confirm/{value}")]
 async fn confirm(token: web::Path<Token>) -> Result<String> {
     confirm_action(&token.value)?;
     Ok(String::from("Confirmation successfull!"))

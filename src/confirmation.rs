@@ -15,18 +15,18 @@ pub fn confirm_action(token: &str) -> Result<(), Error> {
             Err(_) => return Err(Error::Inaccessible),
         }
     } else {
-        return Err(Error::MissingPath);
+        return Err(Error::MissingPending);
     };
     let key = match serde_json::from_str::<Pending>(&content) {
         Ok(key) => key,
-        Err(_) => return Err(Error::ParseStored),
+        Err(_) => return Err(Error::DeserializeData),
     };
     match key.action() {
         Action::Add => {
             let cert = parse_pem(key.data())?;
             let domain = match get_email_from_cert(&cert)?.split('@').last() {
                 Some(domain) => domain.to_string(),
-                None => return Err(Error::MalformedMail),
+                None => return Err(Error::ParseEmail),
             };
             match sequoia_net::wkd::insert(PATH, domain, VARIANT, &cert) {
                 Ok(_) => (),
