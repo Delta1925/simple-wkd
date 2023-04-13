@@ -36,7 +36,7 @@ struct Email {
 async fn main() -> std::io::Result<()> {
     fs::create_dir_all(pending_path!())?;
     task::spawn(async {
-        let mut metronome = time::interval(time::Duration::from_secs(60 * 60 * 3));
+        let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
             metronome.tick().await;
             clean_stale(SETTINGS.max_age).unwrap();

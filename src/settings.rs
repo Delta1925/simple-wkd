@@ -9,6 +9,7 @@ pub struct Settings {
     #[serde(with = "VariantDef")]
     pub variant: Variant,
     pub max_age: i64,
+    pub cleanup_interval: u64,
     pub port: u16,
     pub folder_structure: FolderStructure,
     pub smtp_settings: MailSettings,
@@ -38,6 +39,7 @@ pub enum VariantDef {
 }
 
 fn get_settings() -> Settings {
+    println!("Reaing settings...");
     let content = fs::read_to_string("wkd.toml").unwrap();
     toml::from_str(&content).unwrap()
 }

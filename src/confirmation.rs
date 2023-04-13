@@ -1,3 +1,5 @@
+use chrono::Utc;
+
 use crate::errors::Error;
 use crate::management::{delete_key, Action, Pending};
 use crate::pending_path;
@@ -21,28 +23,35 @@ pub fn confirm_action(token: &str) -> Result<(), Error> {
         Ok(key) => key,
         Err(_) => return Err(Error::DeserializeData),
     };
-    match key.action() {
-        Action::Add => {
-            let cert = parse_pem(key.data())?;
-            let domain = match get_email_from_cert(&cert)?.split('@').last() {
-                Some(domain) => domain.to_string(),
-                None => return Err(Error::ParseEmail),
-            };
-            match sequoia_net::wkd::insert(
-                &SETTINGS.folder_structure.root_folder,
-                domain,
-                SETTINGS.variant,
-                &cert,
-            ) {
-                Ok(_) => (),
-                Err(_) => return Err(Error::AddingKey),
-            }
+    if Utc::now().timestamp() - key.timestamp() > SETTINGS.max_age {
+        match fs::remove_file(pending_path) {
+            Ok(_) => Err(Error::MissingPending),
+            Err(_) => Err(Error::Inaccessible),
         }
-        Action::Delete => delete_key(key.data())?,
-    }
-    match fs::remove_file(&pending_path) {
-        Ok(_) => Ok(()),
-        Err(_) => Err(Error::Inaccessible),
+    } else {
+        match key.action() {
+            Action::Add => {
+                let cert = parse_pem(key.data())?;
+                let domain = match get_email_from_cert(&cert)?.split('@').last() {
+                    Some(domain) => domain.to_string(),
+                    None => return Err(Error::ParseEmail),
+                };
+                match sequoia_net::wkd::insert(
+                    &SETTINGS.folder_structure.root_folder,
+                    domain,
+                    SETTINGS.variant,
+                    &cert,
+                ) {
+                    Ok(_) => (),
+                    Err(_) => return Err(Error::AddingKey),
+                }
+            }
+            Action::Delete => delete_key(key.data())?,
+        }
+        match fs::remove_file(&pending_path) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(Error::Inaccessible),
+        }
     }
 }
 
