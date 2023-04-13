@@ -1,0 +1,16 @@
+variant = "Advanced"
+max_age = 900
+cleanup_interval = 21600
+port = 8080
+
+[folder_structure]
+root_folder = "data"
+pending_folder = "pending"
+
+[smtp_settings]
+smtp_host = "mail.example.org"
+smtp_username = "keyservice"
+smtp_password = "verysecurepassword"
+smtp_port = 465
+mail_from = "key-submission@example.org"
+mail_subject = "Confirm this action"
