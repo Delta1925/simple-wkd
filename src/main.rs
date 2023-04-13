@@ -17,7 +17,8 @@ use tokio::{task, time};
 const PATH: &str = "data";
 const PENDING: &str = "pending";
 const MAX_AGE: i64 = 0;
-const VARIANT: Variant = Variant::Direct;
+const VARIANT: Variant = Variant::Advanced;
+const PORT: u16 = 8080;
 
 #[derive(Deserialize, Debug)]
 struct Pem {
@@ -45,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         }
     });
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
-        .bind(("127.0.0.1", 8080))?
+        .bind(("127.0.0.1", PORT))?
         .run()
         .await
 }
@@ -57,13 +58,13 @@ async fn submit(pem: web::Form<Pem>) -> Result<String> {
     let token = gen_random_token();
     store_pending_addition(pem.key.clone(), &token)?;
     send_confirmation_email(&email, &Action::Add, &token);
-    Ok(String::from("OK!"))
+    Ok(String::from("Key submitted successfully!"))
 }
 
 #[get("/api/confirm/{data}")]
 async fn confirm(token: web::Path<Token>) -> Result<String> {
     confirm_action(&token.data)?;
-    Ok(String::from("OK!"))
+    Ok(String::from("Confirmation successfull!"))
 }
 
 #[get("/api/delete/{address}")]
@@ -71,5 +72,5 @@ async fn delete(email: web::Path<Email>) -> Result<String> {
     let token = gen_random_token();
     store_pending_deletion(email.address.clone(), &token)?;
     send_confirmation_email(&email.address, &Action::Delete, &token);
-    Ok(String::from("OK!"))
+    Ok(String::from("Deletion request submitted successfully!"))
 }
