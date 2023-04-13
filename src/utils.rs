@@ -1,10 +1,10 @@
 use crate::errors::Error;
-use crate::VARIANT;
+use crate::{PATH, PENDING, VARIANT};
 
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, Cert};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[macro_export]
 macro_rules! pending_path {
@@ -49,4 +49,12 @@ pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
         Ok(path) => Ok(path),
         Err(_) => Err(Error::ParseMail),
     }
+}
+
+pub fn key_exists(email: &str) -> Result<bool, Error> {
+    let path = get_user_file_path(email)?;
+    if !pending_path!().join(path).is_file() {
+        return Err(Error::MissingKey);
+    }
+    Ok(true)
 }

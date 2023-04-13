@@ -19,6 +19,8 @@ pub enum Error {
     DeserializeData,
     #[error("File or directory does not exist")]
     MissingPath,
+    #[error("Requested key does not exist")]
+    MissingKey,
     #[error("The file is inaccessible")]
     Inaccessible,
     #[error("Error while adding a key to the wkd")]
@@ -29,6 +31,7 @@ impl actix_web::ResponseError for Error {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
             Self::MissingPath => StatusCode::from_u16(404).unwrap(),
+            Self::MissingKey => StatusCode::from_u16(404).unwrap(),
             _ => StatusCode::from_u16(500).unwrap(),
         }
     }

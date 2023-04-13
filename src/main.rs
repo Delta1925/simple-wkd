@@ -3,6 +3,8 @@ mod errors;
 mod management;
 mod utils;
 
+use crate::utils::key_exists;
+
 use self::confirmation::{confirm_action, send_confirmation_email};
 use self::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
@@ -69,6 +71,7 @@ async fn confirm(token: web::Path<Token>) -> Result<String> {
 
 #[get("/api/delete/{address}")]
 async fn delete(email: web::Path<Email>) -> Result<String> {
+    key_exists(&email.address)?;
     let token = gen_random_token();
     store_pending_deletion(email.address.clone(), &token)?;
     send_confirmation_email(&email.address, &Action::Delete, &token);

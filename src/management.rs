@@ -73,7 +73,7 @@ pub fn store_pending_deletion(email: String, token: &str) -> Result<(), Error> {
 pub fn clean_stale(max_age: i64) -> Result<(), Error> {
     for path in fs::read_dir(pending_path!()).unwrap().flatten() {
         let file_path = path.path();
-        if file_path.exists() {
+        if file_path.is_file() {
             let content = match fs::read_to_string(&file_path) {
                 Ok(content) => content,
                 Err(_) => return Err(Error::Inaccessible),

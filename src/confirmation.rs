@@ -9,7 +9,7 @@ use std::path::Path;
 
 pub fn confirm_action(token: &str) -> Result<(), Error> {
     let pending_path = pending_path!().join(token);
-    let content = if pending_path.exists() {
+    let content = if pending_path.is_file() {
         match fs::read_to_string(&pending_path) {
             Ok(content) => content,
             Err(_) => return Err(Error::Inaccessible),
