@@ -1,3 +1,4 @@
+use crate::errors::Error;
 use crate::VARIANT;
 
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -12,8 +13,11 @@ macro_rules! pending_path {
     };
 }
 
-pub fn parse_pem(data: &str) -> Cert {
-    sequoia_openpgp::Cert::from_bytes(data.as_bytes()).unwrap()
+pub fn parse_pem(data: &str) -> Result<Cert, Error> {
+    match sequoia_openpgp::Cert::from_bytes(data.as_bytes()) {
+        Ok(data) => Ok(data),
+        Err(_) => Err(Error::ParseCert),
+    }
 }
 
 pub fn gen_random_token() -> String {
@@ -21,10 +25,25 @@ pub fn gen_random_token() -> String {
     (0..10).map(|_| rng.sample(Alphanumeric) as char).collect()
 }
 
-pub fn get_email_from_cert(cert: &Cert) -> String {
-    cert.userids().next().unwrap().email().unwrap().unwrap()
+pub fn get_email_from_cert(cert: &Cert) -> Result<String, Error> {
+    match cert.userids().next() {
+        Some(data) => match data.email() {
+            Ok(data) => match data {
+                Some(data) => Ok(data),
+                None => Err(Error::MissingMail),
+            },
+            Err(_) => Err(Error::ParseMail),
+        },
+        None => Err(Error::ParseCert),
+    }
 }
 
-pub fn get_user_file_path(email: &str) -> PathBuf {
-    Url::from(email).unwrap().to_file_path(VARIANT).unwrap()
+pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
+    match Url::from(email) {
+        Ok(data) => match data.to_file_path(VARIANT) {
+            Ok(data) => Ok(data),
+            Err(_) => Err(Error::ParseMail),
+        },
+        Err(_) => Err(Error::ParseMail),
+    }
 }

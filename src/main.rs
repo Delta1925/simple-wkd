@@ -1,4 +1,5 @@
 mod confirmation;
+mod errors;
 mod management;
 mod utils;
 
@@ -40,7 +41,7 @@ async fn main() -> std::io::Result<()> {
         let mut metronome = time::interval(time::Duration::from_secs(60 * 60 * 3));
         loop {
             metronome.tick().await;
-            clean_stale(MAX_AGE);
+            clean_stale(MAX_AGE).unwrap();
         }
     });
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
@@ -51,24 +52,24 @@ async fn main() -> std::io::Result<()> {
 
 #[post("/api/submit")]
 async fn submit(pem: web::Form<Pem>) -> Result<String> {
-    let cert = parse_pem(&pem.key);
-    let email = get_email_from_cert(&cert);
+    let cert = parse_pem(&pem.key)?;
+    let email = get_email_from_cert(&cert)?;
     let token = gen_random_token();
-    store_pending_addition(pem.key.to_owned(), &token);
-    send_confirmation_email(&email, Action::Add, &token);
+    store_pending_addition(pem.key.clone(), &token)?;
+    send_confirmation_email(&email, &Action::Add, &token);
     Ok(String::from("OK!"))
 }
 
 #[get("/api/confirm/{data}")]
 async fn confirm(token: web::Path<Token>) -> Result<String> {
-    confirm_action(&token.data);
+    confirm_action(&token.data)?;
     Ok(String::from("OK!"))
 }
 
 #[get("/api/delete/{address}")]
 async fn delete(email: web::Path<Email>) -> Result<String> {
     let token = gen_random_token();
-    store_pending_deletion(email.address.to_owned(), &token);
-    send_confirmation_email(&email.address, Action::Delete, &token);
+    store_pending_deletion(email.address.clone(), &token)?;
+    send_confirmation_email(&email.address, &Action::Delete, &token);
     Ok(String::from("OK!"))
 }

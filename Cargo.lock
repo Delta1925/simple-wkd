@@ -1961,6 +1961,7 @@ dependencies = [
  "sequoia-openpgp",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
 ]
 
