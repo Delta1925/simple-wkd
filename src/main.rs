@@ -1,8 +1,10 @@
 mod confirmation;
 mod errors;
 mod management;
+mod settings;
 mod utils;
 
+use crate::settings::SETTINGS;
 use crate::utils::key_exists;
 
 use self::confirmation::{confirm_action, send_confirmation_email};
@@ -10,17 +12,10 @@ use self::management::{clean_stale, store_pending_addition, store_pending_deleti
 use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
 
 use actix_web::{get, post, web, App, HttpServer, Result};
-use sequoia_net::wkd::Variant;
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 use tokio::{task, time};
-
-const PATH: &str = "data";
-const PENDING: &str = "pending";
-const MAX_AGE: i64 = 0;
-const VARIANT: Variant = Variant::Advanced;
-const PORT: u16 = 8080;
 
 #[derive(Deserialize, Debug)]
 struct Pem {
@@ -44,11 +39,11 @@ async fn main() -> std::io::Result<()> {
         let mut metronome = time::interval(time::Duration::from_secs(60 * 60 * 3));
         loop {
             metronome.tick().await;
-            clean_stale(MAX_AGE).unwrap();
+            clean_stale(SETTINGS.max_age).unwrap();
         }
     });
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
-        .bind(("127.0.0.1", PORT))?
+        .bind(("127.0.0.1", SETTINGS.port))?
         .run()
         .await
 }

@@ -1,8 +1,8 @@
 use crate::errors::Error;
 use crate::management::{delete_key, Action, Pending};
+use crate::pending_path;
+use crate::settings::SETTINGS;
 use crate::utils::{get_email_from_cert, parse_pem};
-use crate::PENDING;
-use crate::{pending_path, PATH, VARIANT};
 
 use std::fs;
 use std::path::Path;
@@ -28,7 +28,12 @@ pub fn confirm_action(token: &str) -> Result<(), Error> {
                 Some(domain) => domain.to_string(),
                 None => return Err(Error::ParseEmail),
             };
-            match sequoia_net::wkd::insert(PATH, domain, VARIANT, &cert) {
+            match sequoia_net::wkd::insert(
+                &SETTINGS.folder_structure.root_folder,
+                domain,
+                SETTINGS.variant,
+                &cert,
+            ) {
                 Ok(_) => (),
                 Err(_) => return Err(Error::AddingKey),
             }

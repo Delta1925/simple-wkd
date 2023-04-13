@@ -1,7 +1,7 @@
 use crate::errors::Error;
+use crate::pending_path;
+use crate::settings::SETTINGS;
 use crate::utils::get_user_file_path;
-use crate::PENDING;
-use crate::{pending_path, PATH};
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -95,7 +95,7 @@ pub fn clean_stale(max_age: i64) -> Result<(), Error> {
 }
 
 pub fn delete_key(email: &str) -> Result<(), Error> {
-    let path = Path::new(PATH).join(get_user_file_path(email)?);
+    let path = Path::new(&SETTINGS.folder_structure.root_folder).join(get_user_file_path(email)?);
     match fs::remove_file(path) {
         Ok(_) => Ok(()),
         Err(_) => Err(Error::Inaccessible),

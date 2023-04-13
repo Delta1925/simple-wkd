@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::{PATH, PENDING, VARIANT};
+use crate::settings::SETTINGS;
 
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
@@ -9,7 +9,8 @@ use std::path::{Path, PathBuf};
 #[macro_export]
 macro_rules! pending_path {
     () => {
-        Path::new(PATH).join(PENDING)
+        Path::new(&SETTINGS.folder_structure.root_folder)
+            .join(&SETTINGS.folder_structure.pending_folder)
     };
 }
 
@@ -45,7 +46,7 @@ pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
         Ok(wkd_url) => wkd_url,
         Err(_) => return Err(Error::PathGeneration),
     };
-    match wkd_url.to_file_path(VARIANT) {
+    match wkd_url.to_file_path(SETTINGS.variant) {
         Ok(path) => Ok(path),
         Err(_) => Err(Error::PathGeneration),
     }
