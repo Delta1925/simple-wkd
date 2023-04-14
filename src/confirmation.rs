@@ -67,8 +67,23 @@ pub fn send_confirmation_email(email: &str, action: &Action, token: &str) -> Res
             Ok(mailbox) => mailbox,
             Err(_) => return Err(Error::ParseEmail),
         })
-        .subject(&SETTINGS.mail_settings.mail_subject)
-        .body(format!("{action} - {token}"));
+        .subject(
+            SETTINGS
+                .mail_settings
+                .mail_subject
+                .replace("%a", &action.to_string().to_lowercase()),
+        )
+        .body(format!(
+            "{}",
+            SETTINGS
+                .external_url
+                .join("api/")
+                .unwrap()
+                .join("confirm/")
+                .unwrap()
+                .join(token)
+                .unwrap()
+        ));
 
     let message = match email {
         Ok(message) => message,

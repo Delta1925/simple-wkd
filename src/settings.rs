@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use url::Url;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
@@ -12,7 +13,7 @@ pub struct Settings {
     pub max_age: i64,
     pub cleanup_interval: u64,
     pub port: u16,
-    pub external_url: String,
+    pub external_url: Url,
     pub mail_settings: MailSettings,
 }
 
@@ -41,15 +42,15 @@ pub enum SMTPEncryption {
 }
 
 fn get_settings() -> Settings {
-    println!("Reading settings...");
     let content = match fs::read_to_string("wkd.toml") {
         Ok(content) => content,
         Err(_) => panic!("Unable to access settings file!"),
     };
-    match toml::from_str(&content) {
+    let settings = match toml::from_str(&content) {
         Ok(settings) => settings,
         Err(_) => panic!("Unable to parse settings from file!"),
-    }
+    };
+    settings
 }
 
 fn get_mailer() -> SmtpTransport {
@@ -63,13 +64,14 @@ fn get_mailer() -> SmtpTransport {
             SmtpTransport::starttls_relay(&SETTINGS.mail_settings.smtp_host)
         }
     };
-    match builder {
+    let mailer = match builder {
         Ok(builder) => builder,
         Err(_) => panic!("Unable to set up smtp"),
     }
     .credentials(creds)
     .port(SETTINGS.mail_settings.smtp_port)
-    .build()
+    .build();
+    mailer
 }
 
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);

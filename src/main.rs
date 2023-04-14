@@ -12,10 +12,12 @@ use self::management::{clean_stale, store_pending_addition, store_pending_deleti
 use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
 
 use actix_web::{get, post, web, App, HttpServer, Result};
+use log::error;
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 use tokio::{task, time};
+use utils::init_logger;
 
 const PENDING_FOLDER: &str = "pending";
 
@@ -36,13 +38,16 @@ struct Email {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    if init_logger().is_err() {
+        panic!("Could not set up logger!")
+    };
     fs::create_dir_all(pending_path!())?;
     task::spawn(async {
         let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
             metronome.tick().await;
             if clean_stale(SETTINGS.max_age).is_err() {
-                eprintln!("Error while cleaning stale requests...");
+                error!("Error while cleaning stale requests!");
             }
         }
     });

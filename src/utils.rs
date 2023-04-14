@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use crate::settings::SETTINGS;
 
+use flexi_logger::{style, DeferredNow, FlexiLoggerError, Logger, LoggerHandle, Record};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, Cert};
@@ -57,4 +58,27 @@ pub fn key_exists(email: &str) -> Result<bool, Error> {
         return Err(Error::MissingKey);
     }
     Ok(true)
+}
+
+pub fn custom_format(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    let level = record.level();
+    write!(
+        w,
+        "[{}] [{}] {}: {}",
+        style(level).paint(now.format("%Y-%m-%d %H:%M:%S").to_string()),
+        style(level).paint(record.module_path().unwrap_or("<unnamed>")),
+        style(level).paint(record.level().to_string()),
+        style(level).paint(&record.args().to_string())
+    )
+}
+
+pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
+    Logger::try_with_env_or_str("simple_wkd=trace")?
+        .format(custom_format)
+        .set_palette("b1;3;2;4;6".to_string())
+        .start()
 }
