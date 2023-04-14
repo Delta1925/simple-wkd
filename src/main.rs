@@ -5,7 +5,6 @@ mod settings;
 mod utils;
 
 use crate::settings::SETTINGS;
-use crate::utils::key_exists;
 
 use self::confirmation::{confirm_action, send_confirmation_email};
 use self::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
@@ -52,6 +51,7 @@ async fn main() -> std::io::Result<()> {
             info!("Cleanup completed!");
         }
     });
+    info!("Running server on http://127.0.0.1:{} (External URL: {})", SETTINGS.port, SETTINGS.external_url);
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
         .bind(("127.0.0.1", SETTINGS.port))?
         .run()
@@ -81,7 +81,6 @@ async fn confirm(token: web::Path<Token>) -> Result<String> {
 
 #[get("/api/delete/{address}")]
 async fn delete(email: web::Path<Email>) -> Result<String> {
-    key_exists(&email.address)?;
     let token = gen_random_token();
     store_pending_deletion(email.address.clone(), &token)?;
     send_confirmation_email(&email.address, &Action::Delete, &token)?;

@@ -1,6 +1,6 @@
 use crate::pending_path;
 use crate::settings::SETTINGS;
-use crate::utils::get_user_file_path;
+use crate::utils::{get_user_file_path, key_exists};
 use crate::PENDING_FOLDER;
 use crate::{errors::Error, utils::get_filename};
 
@@ -74,6 +74,11 @@ pub fn store_pending_addition(pem: String, email: &str, token: &str) -> Result<(
 }
 
 pub fn store_pending_deletion(email: String, token: &str) -> Result<(), Error> {
+    match key_exists(&email) {
+        Err(Error::PathGeneration) => debug!("Error while generating path for user {}", email),
+        Err(Error::MissingKey) => debug!("There is no key for user {}", email),
+        _ => (),
+    }
     let pending = Pending::build_delete(email.clone());
     store_pending(&pending, token)?;
     debug!(
