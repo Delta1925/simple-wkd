@@ -9,8 +9,7 @@ use std::path::{Path, PathBuf};
 #[macro_export]
 macro_rules! pending_path {
     () => {
-        Path::new(&SETTINGS.folder_structure.root_folder)
-            .join(&SETTINGS.folder_structure.pending_folder)
+        Path::new(&SETTINGS.root_folder).join(PENDING_FOLDER)
     };
 }
 
@@ -54,7 +53,7 @@ pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
 
 pub fn key_exists(email: &str) -> Result<bool, Error> {
     let path = get_user_file_path(email)?;
-    if !pending_path!().join(path).is_file() {
+    if !Path::new(&SETTINGS.root_folder).join(path).is_file() {
         return Err(Error::MissingKey);
     }
     Ok(true)

@@ -3,26 +3,32 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, Copy)]
 pub enum Error {
-    #[error("Error while parsing cert")]
+    #[error("EP1: Error while parsing cert")]
     ParseCert,
-    #[error("Error while parsing an E-Mail address")]
+    #[error("EP2: Error while parsing an E-Mail address")]
     ParseEmail,
-    #[error("There is no pending request associated to this token")]
+    #[error("EM1: There is no pending request associated to this token")]
     MissingPending,
-    #[error("Requested key does not exist")]
+    #[error("EM2: Requested key does not exist")]
     MissingKey,
-    #[error("No E-Mail found in the certificate")]
+    #[error("EM3: No E-Mail found in the certificate")]
     MissingMail,
-    #[error("Error while serializing data")]
+    #[error("EE1: Error while sending the E-Mail")]
+    SendMail,
+    #[error("EE2: Error while building the SMTP connection")]
+    SmtpBuilder,
+    #[error("ES1: rror while serializing data")]
     SerializeData,
-    #[error("Error while deserializing data")]
+    #[error("ES2: Error while deserializing data")]
     DeserializeData,
-    #[error("The file is inaccessible")]
+    #[error("ES3: The file is inaccessible")]
     Inaccessible,
-    #[error("Error while adding a key to the wkd")]
+    #[error("ES4: Error while adding a key to the wkd")]
     AddingKey,
-    #[error("Error while generating the wkd path")]
+    #[error("EG1: Error while generating the wkd path")]
     PathGeneration,
+    #[error("EG2: Error while generating the email")]
+    MailGeneration,
 }
 
 impl actix_web::ResponseError for Error {

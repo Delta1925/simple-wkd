@@ -17,6 +17,8 @@ use std::fs;
 use std::path::Path;
 use tokio::{task, time};
 
+const PENDING_FOLDER: &str = "pending";
+
 #[derive(Deserialize, Debug)]
 struct Pem {
     key: String,
@@ -39,7 +41,9 @@ async fn main() -> std::io::Result<()> {
         let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
             metronome.tick().await;
-            clean_stale(SETTINGS.max_age).unwrap();
+            if clean_stale(SETTINGS.max_age).is_err() {
+                eprintln!("Error while cleaning stale requests...");
+            }
         }
     });
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
@@ -54,7 +58,7 @@ async fn submit(pem: web::Form<Pem>) -> Result<String> {
     let email = get_email_from_cert(&cert)?;
     let token = gen_random_token();
     store_pending_addition(pem.key.clone(), &token)?;
-    send_confirmation_email(&email, &Action::Add, &token);
+    send_confirmation_email(&email, &Action::Add, &token)?;
     Ok(String::from("Key submitted successfully!"))
 }
 
@@ -69,6 +73,6 @@ async fn delete(email: web::Path<Email>) -> Result<String> {
     key_exists(&email.address)?;
     let token = gen_random_token();
     store_pending_deletion(email.address.clone(), &token)?;
-    send_confirmation_email(&email.address, &Action::Delete, &token);
+    send_confirmation_email(&email.address, &Action::Delete, &token)?;
     Ok(String::from("Deletion request submitted successfully!"))
 }
