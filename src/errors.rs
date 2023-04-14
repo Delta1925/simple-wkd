@@ -15,8 +15,6 @@ pub enum Error {
     MissingMail,
     #[error("EE1: Error while sending the E-Mail")]
     SendMail,
-    #[error("EE2: Error while building the SMTP connection")]
-    SmtpBuilder,
     #[error("ES1: rror while serializing data")]
     SerializeData,
     #[error("ES2: Error while deserializing data")]

@@ -1,3 +1,4 @@
+use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
 use serde::{Deserialize, Serialize};
@@ -40,7 +41,7 @@ pub enum SMTPEncryption {
 }
 
 fn get_settings() -> Settings {
-    println!("Reaing settings...");
+    println!("Reading settings...");
     let content = match fs::read_to_string("wkd.toml") {
         Ok(content) => content,
         Err(_) => panic!("Unable to access settings file!"),
@@ -51,4 +52,25 @@ fn get_settings() -> Settings {
     }
 }
 
+fn get_mailer() -> SmtpTransport {
+    let creds = Credentials::new(
+        SETTINGS.mail_settings.smtp_username.to_owned(),
+        SETTINGS.mail_settings.smtp_password.to_owned(),
+    );
+    let builder = match &SETTINGS.mail_settings.smtp_tls {
+        SMTPEncryption::Tls => SmtpTransport::relay(&SETTINGS.mail_settings.smtp_host),
+        SMTPEncryption::Starttls => {
+            SmtpTransport::starttls_relay(&SETTINGS.mail_settings.smtp_host)
+        }
+    };
+    match builder {
+        Ok(builder) => builder,
+        Err(_) => panic!("Unable to set up smtp"),
+    }
+    .credentials(creds)
+    .port(SETTINGS.mail_settings.smtp_port)
+    .build()
+}
+
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);
+pub static MAILER: Lazy<SmtpTransport> = Lazy::new(get_mailer);

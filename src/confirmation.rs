@@ -3,12 +3,11 @@ use chrono::Utc;
 use crate::errors::Error;
 use crate::management::{delete_key, Action, Pending};
 use crate::pending_path;
-use crate::settings::{SMTPEncryption, SETTINGS};
+use crate::settings::{MAILER, SETTINGS};
 use crate::utils::{get_email_from_cert, parse_pem};
 use crate::PENDING_FOLDER;
 
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{Message, SmtpTransport, Transport};
+use lettre::{Message, Transport};
 use std::fs;
 use std::path::Path;
 
@@ -59,7 +58,6 @@ pub fn confirm_action(token: &str) -> Result<(), Error> {
 }
 
 pub fn send_confirmation_email(email: &str, action: &Action, token: &str) -> Result<(), Error> {
-    println!("Sending mail, token: {}", &token);
     let email = Message::builder()
         .from(match SETTINGS.mail_settings.mail_from.parse() {
             Ok(mailbox) => mailbox,
@@ -71,28 +69,13 @@ pub fn send_confirmation_email(email: &str, action: &Action, token: &str) -> Res
         })
         .subject(&SETTINGS.mail_settings.mail_subject)
         .body(format!("{action} - {token}"));
+
     let message = match email {
         Ok(message) => message,
         Err(_) => return Err(Error::MailGeneration),
     };
-    let creds = Credentials::new(
-        SETTINGS.mail_settings.smtp_username.to_owned(),
-        SETTINGS.mail_settings.smtp_password.to_owned(),
-    );
-    let builder = match &SETTINGS.mail_settings.smtp_tls {
-        SMTPEncryption::Tls => SmtpTransport::relay(&SETTINGS.mail_settings.smtp_host),
-        SMTPEncryption::Starttls => {
-            SmtpTransport::starttls_relay(&SETTINGS.mail_settings.smtp_host)
-        }
-    };
-    let mailer = match builder {
-        Ok(builder) => builder,
-        Err(_) => return Err(Error::SmtpBuilder),
-    }
-    .credentials(creds)
-    .port(SETTINGS.mail_settings.smtp_port)
-    .build();
-    match mailer.send(&message) {
+
+    match MAILER.send(&message) {
         Ok(_) => Ok(()),
         Err(_) => Err(Error::SendMail),
     }
