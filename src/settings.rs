@@ -1,4 +1,5 @@
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
+use log::{debug, error, warn};
 use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
 use serde::{Deserialize, Serialize};
@@ -42,18 +43,27 @@ pub enum SMTPEncryption {
 }
 
 fn get_settings() -> Settings {
+    debug!("Reading settings...");
     let content = match fs::read_to_string("wkd.toml") {
         Ok(content) => content,
-        Err(_) => panic!("Unable to access settings file!"),
+        Err(_) => {
+            error!("Unable to access settings file!");
+            panic!("Unable to access settings file!")
+        }
     };
     let settings = match toml::from_str(&content) {
         Ok(settings) => settings,
-        Err(_) => panic!("Unable to parse settings from file!"),
+        Err(_) => {
+            error!("Unable to parse settings from file!");
+            panic!("Unable to parse settings from file!")
+        }
     };
+    debug!("Successfully read setting!");
     settings
 }
 
 fn get_mailer() -> SmtpTransport {
+    debug!("Setting up SMTP...");
     let creds = Credentials::new(
         SETTINGS.mail_settings.smtp_username.to_owned(),
         SETTINGS.mail_settings.smtp_password.to_owned(),
@@ -66,11 +76,18 @@ fn get_mailer() -> SmtpTransport {
     };
     let mailer = match builder {
         Ok(builder) => builder,
-        Err(_) => panic!("Unable to set up smtp"),
+        Err(_) => {
+            error!("Unable to set up smtp");
+            panic!("Unable to set up smtp")
+        }
     }
     .credentials(creds)
     .port(SETTINGS.mail_settings.smtp_port)
     .build();
+    if mailer.test_connection().is_err() {
+        warn!("Connection test to smtp host failed!");
+    }
+    debug!("SMTP setup successful!");
     mailer
 }
 

@@ -1,14 +1,15 @@
-use crate::errors::Error;
 use crate::pending_path;
 use crate::settings::SETTINGS;
 use crate::utils::get_user_file_path;
 use crate::PENDING_FOLDER;
+use crate::{errors::Error, utils::get_filename};
 
 use chrono::Utc;
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs, path::Path};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Action {
     Add,
     Delete,
@@ -65,40 +66,62 @@ fn store_pending(pending: &Pending, token: &str) -> Result<(), Error> {
     }
 }
 
-pub fn store_pending_addition(pem: String, token: &str) -> Result<(), Error> {
+pub fn store_pending_addition(pem: String, email: &str, token: &str) -> Result<(), Error> {
     let pending = Pending::build_add(pem);
     store_pending(&pending, token)?;
+    debug!("Stored submission from {} with token {}", email, token);
     Ok(())
 }
 
 pub fn store_pending_deletion(email: String, token: &str) -> Result<(), Error> {
-    let pending = Pending::build_delete(email);
+    let pending = Pending::build_delete(email.clone());
     store_pending(&pending, token)?;
+    debug!(
+        "Stored deletion request from {} with token {}",
+        email, token
+    );
     Ok(())
 }
 
-pub fn clean_stale(max_age: i64) -> Result<(), Error> {
+pub fn clean_stale(max_age: i64) {
     for path in fs::read_dir(pending_path!()).unwrap().flatten() {
         let file_path = path.path();
         if file_path.is_file() {
             let content = match fs::read_to_string(&file_path) {
                 Ok(content) => content,
-                Err(_) => return Err(Error::Inaccessible),
+                Err(_) => {
+                    warn!(
+                        "Could not read contents of token {} to string",
+                        get_filename(&file_path).unwrap()
+                    );
+                    continue;
+                }
             };
             let key = match serde_json::from_str::<Pending>(&content) {
                 Ok(key) => key,
-                Err(_) => return Err(Error::DeserializeData),
+                Err(_) => {
+                    warn!(
+                        "Could not deserialize token {}",
+                        get_filename(&file_path).unwrap()
+                    );
+                    continue;
+                }
             };
             let now = Utc::now().timestamp();
             if now - key.timestamp() > max_age {
-                let err = fs::remove_file(&file_path).is_err();
-                if err {
-                    return Err(Error::Inaccessible);
+                if fs::remove_file(&file_path).is_err() {
+                    {
+                        warn!(
+                            "Could not delete stale token {}",
+                            get_filename(&file_path).unwrap()
+                        );
+                        continue;
+                    };
                 }
+                debug!("Deleted stale token {}", get_filename(&file_path).unwrap())
             }
         }
     }
-    Ok(())
 }
 
 pub fn delete_key(email: &str) -> Result<(), Error> {

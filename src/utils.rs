@@ -60,6 +60,10 @@ pub fn key_exists(email: &str) -> Result<bool, Error> {
     Ok(true)
 }
 
+pub fn get_filename(path: &Path) -> Option<&str> {
+    path.file_name()?.to_str()
+}
+
 pub fn custom_format(
     w: &mut dyn std::io::Write,
     now: &mut DeferredNow,

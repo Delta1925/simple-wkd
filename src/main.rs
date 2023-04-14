@@ -12,7 +12,7 @@ use self::management::{clean_stale, store_pending_addition, store_pending_deleti
 use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
 
 use actix_web::{get, post, web, App, HttpServer, Result};
-use log::error;
+use log::{error, info};
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
@@ -39,6 +39,7 @@ struct Email {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     if init_logger().is_err() {
+        error!("Could not set up logger!");
         panic!("Could not set up logger!")
     };
     fs::create_dir_all(pending_path!())?;
@@ -46,9 +47,9 @@ async fn main() -> std::io::Result<()> {
         let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
             metronome.tick().await;
-            if clean_stale(SETTINGS.max_age).is_err() {
-                error!("Error while cleaning stale requests!");
-            }
+            info!("Running cleanup...");
+            clean_stale(SETTINGS.max_age);
+            info!("Cleanup completed!");
         }
     });
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
@@ -62,14 +63,19 @@ async fn submit(pem: web::Form<Pem>) -> Result<String> {
     let cert = parse_pem(&pem.key)?;
     let email = get_email_from_cert(&cert)?;
     let token = gen_random_token();
-    store_pending_addition(pem.key.clone(), &token)?;
+    store_pending_addition(pem.key.clone(), &email, &token)?;
     send_confirmation_email(&email, &Action::Add, &token)?;
+    info!("User {} submitted a key!", &email);
     Ok(String::from("Key submitted successfully!"))
 }
 
 #[get("/api/confirm/{value}")]
 async fn confirm(token: web::Path<Token>) -> Result<String> {
-    confirm_action(&token.value)?;
+    let (action, email) = confirm_action(&token.value)?;
+    match action {
+        Action::Add => info!("Key for user {} was added successfully!", email),
+        Action::Delete => info!("Key for user {} was deleted successfully!", email),
+    }
     Ok(String::from("Confirmation successful!"))
 }
 
@@ -79,5 +85,6 @@ async fn delete(email: web::Path<Email>) -> Result<String> {
     let token = gen_random_token();
     store_pending_deletion(email.address.clone(), &token)?;
     send_confirmation_email(&email.address, &Action::Delete, &token)?;
+    info!("User {} requested the deletion of his key!", email.address);
     Ok(String::from("Deletion request submitted successfully!"))
 }
