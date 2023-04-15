@@ -5,7 +5,7 @@ use crate::PENDING_FOLDER;
 use crate::{errors::Error, utils::get_filename};
 
 use chrono::Utc;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs, path::Path};
 
@@ -74,10 +74,13 @@ pub fn store_pending_addition(pem: String, email: &str, token: &str) -> Result<(
 }
 
 pub fn store_pending_deletion(email: String, token: &str) -> Result<(), Error> {
-    match key_exists(&email) {
-        Err(Error::PathGeneration) => debug!("Error while generating path for user {}", email),
-        Err(Error::MissingKey) => debug!("There is no key for user {}", email),
-        _ => (),
+    if let Err(error) = key_exists(&email) {
+        match error {
+            Error::PathGeneration => debug!("Error while generating path for user {}", email),
+            Error::MissingKey => debug!("There is no key for user {}", email),
+            _ => error!("An unexpected error occoured!"),
+        }
+        return Err(error);
     }
     let pending = Pending::build_delete(email.clone());
     store_pending(&pending, token)?;

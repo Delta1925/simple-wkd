@@ -13,4 +13,4 @@ smtp_password = "verysecurepassword"
 smtp_port = 465
 smtp_tls = "Tls"
 mail_from = "key-submission@example.org"
-mail_subject = "Confirm this action"
+mail_subject = "Please confirm to %a your public key"

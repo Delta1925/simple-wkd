@@ -105,6 +105,13 @@ pub fn confirm_action(token: &str) -> Result<(Action, String), Error> {
 pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> Result<(), Error> {
     debug!("Sending email to {}", address);
     let template = fs::read_to_string(Path::new("assets").join("mail-template.html")).unwrap();
+    let mut url = SETTINGS
+        .external_url
+        .join("api/")
+        .unwrap()
+        .join("confirm")
+        .unwrap();
+    url.set_query(Some(&format!("token={}", token)));
     let email = Message::builder()
         .from(match SETTINGS.mail_settings.mail_from.parse() {
             Ok(mailbox) => mailbox,
@@ -129,18 +136,7 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
         .header(ContentType::TEXT_HTML)
         .body(
             template
-                .replace(
-                    "{{%u}}",
-                    SETTINGS
-                        .external_url
-                        .join("api/")
-                        .unwrap()
-                        .join("confirm/")
-                        .unwrap()
-                        .join(token)
-                        .unwrap()
-                        .as_ref(),
-                )
+                .replace("{{%u}}", url.as_ref())
                 .replace("{{%a}}", &action.to_string().to_lowercase()),
         );
 

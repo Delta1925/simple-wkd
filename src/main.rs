@@ -23,18 +23,18 @@ use utils::init_logger;
 const PENDING_FOLDER: &str = "pending";
 
 #[derive(Deserialize, Debug)]
-struct Pem {
+struct Key {
     key: String,
 }
 
 #[derive(Deserialize, Debug)]
 struct Token {
-    value: String,
+    token: String,
 }
 
 #[derive(Deserialize, Debug)]
 struct Email {
-    address: String,
+    email: String,
 }
 
 #[actix_web::main]
@@ -67,7 +67,7 @@ async fn main() -> std::io::Result<()> {
 }
 
 #[post("/api/submit")]
-async fn submit(pem: web::Form<Pem>) -> Result<String> {
+async fn submit(pem: web::Form<Key>) -> Result<String> {
     let cert = parse_pem(&pem.key)?;
     let email = get_email_from_cert(&cert)?;
     is_email_allowed(&email)?;
@@ -75,24 +75,24 @@ async fn submit(pem: web::Form<Pem>) -> Result<String> {
     store_pending_addition(pem.key.clone(), &email, &token)?;
     send_confirmation_email(&email, &Action::Add, &token)?;
     info!("User {} submitted a key!", &email);
-    Ok(String::from("Key submitted successfully!"))
+    Ok(String::from("(0x00) Key submitted successfully!"))
 }
 
-#[get("/api/confirm/{value}")]
-async fn confirm(token: web::Path<Token>) -> Result<String> {
-    let (action, email) = confirm_action(&token.value)?;
+#[get("/api/confirm")]
+async fn confirm(token: web::Query<Token>) -> Result<String> {
+    let (action, email) = confirm_action(&token.token)?;
     match action {
         Action::Add => info!("Key for user {} was added successfully!", email),
         Action::Delete => info!("Key for user {} was deleted successfully!", email),
     }
-    Ok(String::from("Confirmation successful!"))
+    Ok(String::from("(0x00) Confirmation successful!"))
 }
 
-#[get("/api/delete/{address}")]
-async fn delete(email: web::Path<Email>) -> Result<String> {
+#[get("/api/delete")]
+async fn delete(email: web::Query<Email>) -> Result<String> {
     let token = gen_random_token();
-    store_pending_deletion(email.address.clone(), &token)?;
-    send_confirmation_email(&email.address, &Action::Delete, &token)?;
-    info!("User {} requested the deletion of his key!", email.address);
-    Ok(String::from("Deletion request submitted successfully!"))
+    store_pending_deletion(email.email.clone(), &token)?;
+    send_confirmation_email(&email.email, &Action::Delete, &token)?;
+    info!("User {} requested the deletion of his key!", email.email);
+    Ok(String::from("(0x00) Deletion request submitted successfully!"))
 }

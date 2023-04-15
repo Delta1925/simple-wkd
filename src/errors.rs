@@ -3,33 +3,33 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, Copy)]
 pub enum Error {
-    #[error("(0x00) Cert is invalid")]
+    #[error("(0x01) Cert is invalid")]
     InvalidCert,
-    #[error("(0x01) Error while parsing cert")]
+    #[error("(0x02) Error while parsing cert")]
     ParseCert,
-    #[error("(0x02) Error while parsing an E-Mail address")]
+    #[error("(0x03) Error while parsing an E-Mail address")]
     ParseEmail,
-    #[error("(0x03) There is no pending request associated to this token")]
+    #[error("(0x04) There is no pending request associated to this token")]
     MissingPending,
-    #[error("(0x04) Requested key does not exist")]
+    #[error("(0x05) Requested key does not exist")]
     MissingKey,
-    #[error("(0x05) No E-Mail found in the certificate")]
+    #[error("(0x06) No E-Mail found in the certificate")]
     MissingMail,
-    #[error("(0x06) Error while sending the E-Mail")]
+    #[error("(0x07) Error while sending the E-Mail")]
     SendMail,
-    #[error("(0x07) rror while serializing data")]
+    #[error("(0x08) rror while serializing data")]
     SerializeData,
-    #[error("(0x08) Error while deserializing data")]
+    #[error("(0x09) Error while deserializing data")]
     DeserializeData,
-    #[error("(0x09) The file is inaccessible")]
+    #[error("(0x0A) The file is inaccessible")]
     Inaccessible,
-    #[error("(0x0A) Error while adding a key to the wkd")]
+    #[error("(0x0B) Error while adding a key to the wkd")]
     AddingKey,
-    #[error("(0x0B) Error while generating the wkd path")]
+    #[error("(0x0C) Error while generating the wkd path")]
     PathGeneration,
-    #[error("(0x0C) Error while generating the email")]
+    #[error("(0x0D) Error while generating the email")]
     MailGeneration,
-    #[error("(0x0D) Wrong email domain")]
+    #[error("(0x0E) Wrong email domain")]
     WrongDomain,
 }
 
