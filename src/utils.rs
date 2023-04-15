@@ -4,7 +4,7 @@ use crate::settings::SETTINGS;
 use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
-use sequoia_openpgp::{parse::Parse, Cert};
+use sequoia_openpgp::{parse::Parse, Cert, policy::NullPolicy};
 use std::path::{Path, PathBuf};
 
 #[macro_export]
@@ -15,10 +15,15 @@ macro_rules! pending_path {
 }
 
 pub fn parse_pem(pemfile: &str) -> Result<Cert, Error> {
-    match sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()) {
-        Ok(cert) => Ok(cert),
-        Err(_) => Err(Error::ParseCert),
+    let cert = match sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()) {
+        Ok(cert) => cert,
+        Err(_) => return Err(Error::ParseCert),
+    };
+    let policy = NullPolicy::new();
+    if cert.with_policy(&policy, None).is_err() {
+        return Err(Error::InvalidCert)
     }
+    Ok(cert)
 }
 
 pub fn gen_random_token() -> String {
@@ -27,9 +32,14 @@ pub fn gen_random_token() -> String {
 }
 
 pub fn get_email_from_cert(cert: &Cert) -> Result<String, Error> {
-    let userid_opt = match cert.userids().next() {
-        Some(userid_opt) => userid_opt,
-        None => return Err(Error::ParseCert),
+    let policy = NullPolicy::new();
+    let validcert = match cert.with_policy(&policy, None) {
+        Ok(validcert) => validcert,
+        Err(_) => return Err(Error::InvalidCert)
+    };
+    let userid_opt = match validcert.primary_userid() {
+        Ok(userid_opt) => userid_opt,
+        Err(_) => return Err(Error::ParseCert),
     };
     let email_opt = match userid_opt.email() {
         Ok(email_opt) => email_opt,

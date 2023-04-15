@@ -3,6 +3,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, Copy)]
 pub enum Error {
+    #[error("EC1: Cert is invalid")]
+    InvalidCert,
     #[error("EP1: Error while parsing cert")]
     ParseCert,
     #[error("EP2: Error while parsing an E-Mail address")]
