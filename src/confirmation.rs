@@ -1,4 +1,5 @@
 use chrono::Utc;
+use lettre::message::header::ContentType;
 use log::{debug, error, trace, warn};
 
 use crate::errors::Error;
@@ -103,6 +104,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String), Error> {
 
 pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> Result<(), Error> {
     debug!("Sending email to {}", address);
+    let template = fs::read_to_string(Path::new("static").join("mail-template.html")).unwrap();
     let email = Message::builder()
         .from(match SETTINGS.mail_settings.mail_from.parse() {
             Ok(mailbox) => mailbox,
@@ -124,17 +126,23 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
                 .mail_subject
                 .replace("%a", &action.to_string().to_lowercase()),
         )
-        .body(format!(
-            "{}",
-            SETTINGS
-                .external_url
-                .join("api/")
-                .unwrap()
-                .join("confirm/")
-                .unwrap()
-                .join(token)
-                .unwrap()
-        ));
+        .header(ContentType::TEXT_HTML)
+        .body(
+            template
+                .replace(
+                    "{{%u}}",
+                    SETTINGS
+                        .external_url
+                        .join("api/")
+                        .unwrap()
+                        .join("confirm/")
+                        .unwrap()
+                        .join(token)
+                        .unwrap()
+                        .as_ref(),
+                )
+                .replace("{{%a}}", &action.to_string().to_lowercase()),
+        );
 
     let message = match email {
         Ok(message) => message,
