@@ -2,6 +2,7 @@ variant = "Advanced"
 root_folder = "data"
 max_age = 900
 cleanup_interval = 21600
+allowed_domains = ["example.org", "example.com"]
 port = 8080
 external_url = "http://localhost:8080"
 

@@ -3,32 +3,34 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, Copy)]
 pub enum Error {
-    #[error("EC1: Cert is invalid")]
+    #[error("(0x00) Cert is invalid")]
     InvalidCert,
-    #[error("EP1: Error while parsing cert")]
+    #[error("(0x01) Error while parsing cert")]
     ParseCert,
-    #[error("EP2: Error while parsing an E-Mail address")]
+    #[error("(0x02) Error while parsing an E-Mail address")]
     ParseEmail,
-    #[error("EM1: There is no pending request associated to this token")]
+    #[error("(0x03) There is no pending request associated to this token")]
     MissingPending,
-    #[error("EM2: Requested key does not exist")]
+    #[error("(0x04) Requested key does not exist")]
     MissingKey,
-    #[error("EM3: No E-Mail found in the certificate")]
+    #[error("(0x05) No E-Mail found in the certificate")]
     MissingMail,
-    #[error("EE1: Error while sending the E-Mail")]
+    #[error("(0x06) Error while sending the E-Mail")]
     SendMail,
-    #[error("ES1: rror while serializing data")]
+    #[error("(0x07) rror while serializing data")]
     SerializeData,
-    #[error("ES2: Error while deserializing data")]
+    #[error("(0x08) Error while deserializing data")]
     DeserializeData,
-    #[error("ES3: The file is inaccessible")]
+    #[error("(0x09) The file is inaccessible")]
     Inaccessible,
-    #[error("ES4: Error while adding a key to the wkd")]
+    #[error("(0x0A) Error while adding a key to the wkd")]
     AddingKey,
-    #[error("EG1: Error while generating the wkd path")]
+    #[error("(0x0B) Error while generating the wkd path")]
     PathGeneration,
-    #[error("EG2: Error while generating the email")]
+    #[error("(0x0C) Error while generating the email")]
     MailGeneration,
+    #[error("(0x0D) Wrong email domain")]
+    WrongDomain,
 }
 
 impl actix_web::ResponseError for Error {
@@ -36,6 +38,7 @@ impl actix_web::ResponseError for Error {
         match self {
             Self::MissingPending => StatusCode::from_u16(404).unwrap(),
             Self::MissingKey => StatusCode::from_u16(404).unwrap(),
+            Self::WrongDomain => StatusCode::from_u16(401).unwrap(),
             _ => StatusCode::from_u16(500).unwrap(),
         }
     }

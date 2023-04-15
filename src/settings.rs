@@ -13,6 +13,7 @@ pub struct Settings {
     pub root_folder: String,
     pub max_age: i64,
     pub cleanup_interval: u64,
+    pub allowed_domains: Vec<String>,
     pub port: u16,
     pub external_url: Url,
     pub mail_settings: MailSettings,

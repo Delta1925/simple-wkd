@@ -5,6 +5,7 @@ mod settings;
 mod utils;
 
 use crate::settings::SETTINGS;
+use crate::utils::is_email_allowed;
 
 use self::confirmation::{confirm_action, send_confirmation_email};
 use self::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
@@ -69,6 +70,7 @@ async fn main() -> std::io::Result<()> {
 async fn submit(pem: web::Form<Pem>) -> Result<String> {
     let cert = parse_pem(&pem.key)?;
     let email = get_email_from_cert(&cert)?;
+    is_email_allowed(&email)?;
     let token = gen_random_token();
     store_pending_addition(pem.key.clone(), &email, &token)?;
     send_confirmation_email(&email, &Action::Add, &token)?;
