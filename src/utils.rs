@@ -10,7 +10,14 @@ use std::path::{Path, PathBuf};
 #[macro_export]
 macro_rules! pending_path {
     () => {
-        Path::new(&SETTINGS.root_folder).join(PENDING_FOLDER)
+        Path::new(&SETTINGS.root_folder).join("pending")
+    };
+}
+
+#[macro_export]
+macro_rules! webpage_path {
+    () => {
+        Path::new("assets").join("webpage")
     };
 }
 

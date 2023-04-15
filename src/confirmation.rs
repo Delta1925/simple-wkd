@@ -7,7 +7,6 @@ use crate::management::{delete_key, Action, Pending};
 use crate::pending_path;
 use crate::settings::{MAILER, SETTINGS};
 use crate::utils::{get_email_from_cert, get_filename, parse_pem};
-use crate::PENDING_FOLDER;
 
 use lettre::{Message, Transport};
 use std::fs;

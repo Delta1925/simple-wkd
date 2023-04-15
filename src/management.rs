@@ -1,7 +1,6 @@
 use crate::pending_path;
 use crate::settings::SETTINGS;
 use crate::utils::{get_user_file_path, key_exists};
-use crate::PENDING_FOLDER;
 use crate::{errors::Error, utils::get_filename};
 
 use chrono::Utc;

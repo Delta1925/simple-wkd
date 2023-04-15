@@ -4,6 +4,7 @@ mod management;
 mod settings;
 mod utils;
 
+use crate::errors::Error;
 use crate::settings::SETTINGS;
 use crate::utils::is_email_allowed;
 
@@ -11,16 +12,18 @@ use self::confirmation::{confirm_action, send_confirmation_email};
 use self::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
 
-use actix_web::{get, post, web, App, HttpServer, Result};
-use log::{error, info};
+use actix_web::http::header::ContentType;
+use actix_web::http::StatusCode;
+use actix_web::{
+    get, post, web, App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Result,
+};
+use log::{debug, error, info};
 use serde::Deserialize;
 use std::env;
 use std::fs;
 use std::path::Path;
 use tokio::{task, time};
 use utils::init_logger;
-
-const PENDING_FOLDER: &str = "pending";
 
 #[derive(Deserialize, Debug)]
 struct Key {
@@ -60,10 +63,42 @@ async fn main() -> std::io::Result<()> {
         "Running server on http://127.0.0.1:{} (External URL: {})",
         SETTINGS.port, SETTINGS.external_url
     );
-    HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
-        .bind(("127.0.0.1", SETTINGS.port))?
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .service(submit)
+            .service(confirm)
+            .service(delete)
+            .route("/{filename:.*}", web::get().to(index))
+    })
+    .bind(("127.0.0.1", SETTINGS.port))?
+    .run()
+    .await
+}
+
+async fn index(req: HttpRequest) -> Result<HttpResponse, Error> {
+    let path = webpage_path!().join(req.match_info().query("filename"));
+    for file in &["", "index.html"] {
+        let path = if file.is_empty() {
+            path.to_owned()
+        } else {
+            path.join(file)
+        };
+        if path.is_file() {
+            let template = match fs::read_to_string(&path) {
+                Ok(template) => template,
+                Err(_) => {
+                    debug!("file {} is inaccessible", path.display());
+                    return Err(Error::Inaccessible);
+                }
+            };
+            let page = template.replace("{{%u}}", SETTINGS.external_url.as_ref());
+            return Ok(HttpResponseBuilder::new(StatusCode::OK)
+                .insert_header(ContentType::html())
+                .body(page));
+        }
+    }
+    debug!("File {} does not exist", path.display());
+    Err(Error::MissingFile)
 }
 
 #[post("/api/submit")]
@@ -94,5 +129,7 @@ async fn delete(email: web::Query<Email>) -> Result<String> {
     store_pending_deletion(email.email.clone(), &token)?;
     send_confirmation_email(&email.email, &Action::Delete, &token)?;
     info!("User {} requested the deletion of his key!", email.email);
-    Ok(String::from("(0x00) Deletion request submitted successfully!"))
+    Ok(String::from(
+        "(0x00) Deletion request submitted successfully!",
+    ))
 }

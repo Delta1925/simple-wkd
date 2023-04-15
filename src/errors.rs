@@ -31,6 +31,8 @@ pub enum Error {
     MailGeneration,
     #[error("(0x0E) Wrong email domain")]
     WrongDomain,
+    #[error("(0x0F) The requested file does not exist")]
+    MissingFile,
 }
 
 impl actix_web::ResponseError for Error {
@@ -38,6 +40,7 @@ impl actix_web::ResponseError for Error {
         match self {
             Self::MissingPending => StatusCode::from_u16(404).unwrap(),
             Self::MissingKey => StatusCode::from_u16(404).unwrap(),
+            Self::MissingFile => StatusCode::from_u16(404).unwrap(),
             Self::WrongDomain => StatusCode::from_u16(401).unwrap(),
             _ => StatusCode::from_u16(500).unwrap(),
         }
