@@ -13,6 +13,7 @@ use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
 use actix_web::{get, post, web, App, HttpServer, Result};
 use log::{error, info};
 use serde::Deserialize;
+use std::env;
 use std::fs;
 use std::path::Path;
 use tokio::{task, time};
@@ -37,6 +38,9 @@ struct Email {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    if let Ok(value) = env::var("RUST_LOG") {
+        env::set_var("RUST_LOG", format!("simple_wkd={}", value));
+    }
     if init_logger().is_err() {
         error!("Could not set up logger!");
         panic!("Could not set up logger!")
@@ -51,7 +55,10 @@ async fn main() -> std::io::Result<()> {
             info!("Cleanup completed!");
         }
     });
-    info!("Running server on http://127.0.0.1:{} (External URL: {})", SETTINGS.port, SETTINGS.external_url);
+    info!(
+        "Running server on http://127.0.0.1:{} (External URL: {})",
+        SETTINGS.port, SETTINGS.external_url
+    );
     HttpServer::new(|| App::new().service(submit).service(confirm).service(delete))
         .bind(("127.0.0.1", SETTINGS.port))?
         .run()

@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::settings::SETTINGS;
 
-use flexi_logger::{style, DeferredNow, FlexiLoggerError, Logger, LoggerHandle, Record};
+use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, Cert};
@@ -64,7 +64,7 @@ pub fn get_filename(path: &Path) -> Option<&str> {
     path.file_name()?.to_str()
 }
 
-pub fn custom_format(
+pub fn custom_color_format(
     w: &mut dyn std::io::Write,
     now: &mut DeferredNow,
     record: &Record,
@@ -80,9 +80,30 @@ pub fn custom_format(
     )
 }
 
+pub fn custom_monochrome_format(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "[{}] [{}] {}: {}",
+        now.format("%Y-%m-%d %H:%M:%S"),
+        record.module_path().unwrap_or("<unnamed>"),
+        record.level(),
+        record.args()
+    )
+}
+
 pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
-    Logger::try_with_env_or_str("simple_wkd=trace")?
-        .format(custom_format)
+    Logger::try_with_env_or_str("simple_wkd=debug")?
+        .log_to_file(FileSpec::default().directory("logs"))
+        .duplicate_to_stdout(flexi_logger::Duplicate::All)
+        .format_for_files(custom_monochrome_format)
+        .adaptive_format_for_stdout(flexi_logger::AdaptiveFormat::Custom(
+            custom_monochrome_format,
+            custom_color_format,
+        ))
         .set_palette("b1;3;2;4;6".to_string())
         .start()
 }

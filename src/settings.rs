@@ -44,7 +44,7 @@ pub enum SMTPEncryption {
 
 fn get_settings() -> Settings {
     debug!("Reading settings...");
-    let content = match fs::read_to_string("wkd.toml") {
+    let content = match fs::read_to_string("config.toml") {
         Ok(content) => content,
         Err(_) => {
             error!("Unable to access settings file!");

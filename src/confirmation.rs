@@ -104,7 +104,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String), Error> {
 
 pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> Result<(), Error> {
     debug!("Sending email to {}", address);
-    let template = fs::read_to_string(Path::new("static").join("mail-template.html")).unwrap();
+    let template = fs::read_to_string(Path::new("assets").join("mail-template.html")).unwrap();
     let email = Message::builder()
         .from(match SETTINGS.mail_settings.mail_from.parse() {
             Ok(mailbox) => mailbox,
