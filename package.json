@@ -15,5 +15,10 @@
     "astro": "^2.3.0",
     "astro-critters": "^1.1.31",
     "tailwindcss": "^3.0.24"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.7",
+    "prettier-plugin-astro": "^0.8.0",
+    "prettier-plugin-tailwindcss": "^0.2.7"
   }
 }

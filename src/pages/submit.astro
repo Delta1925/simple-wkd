@@ -1,31 +1,28 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import "../styles/global.css";
+import CenterXy from "../components/center-xy.astro";
 ---
 
 <Layout title="Submit a key">
-	<div class="flex flex-row items-center h-full font-mono px-8 py-4">
-		<div class="flex flex-col items-center w-full">
-			<form
-				action="{{%u}}api/submit"
-				method="post"
-				class="flex flex-col max-w-full"
-			>
-				<label for="key" class="font-bold text-xl"
-					>Paste your pgp keyblock here:</label
-				>
-				<textarea
-					name="key"
-					id="key-input"
-					cols="65"
-					rows="20"
-					class="round focus:rounded-lg mt-3 resize-none"
-					placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"
-					required></textarea>
-				<button type="submit" class="button mt-6 self-end"
-					>Submit</button
-				>
-			</form>
-		</div>
-	</div>
+  <CenterXy>
+    <form
+      action="{{%u}}api/submit"
+      method="post"
+      class="flex max-w-full flex-col"
+    >
+      <label for="key" class="text-xl font-bold"
+        >Paste your pgp keyblock here:</label
+      >
+      <textarea
+        name="key"
+        id="key-input"
+        cols="65"
+        rows="20"
+        class="input mt-3 resize-none"
+        placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"
+        required></textarea>
+      <button type="submit" class="button mt-6 self-end">Submit</button>
+    </form>
+  </CenterXy>
 </Layout>

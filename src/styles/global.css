@@ -1,15 +1,23 @@
-.button {
-    @apply bg-teal-50;
-    @apply p-4;
-    @apply hover:drop-shadow-md;
-    @apply hover:rounded-lg;
+.input {
+  @apply focus:rounded-lg;
+  @apply dark:bg-neutral-800;
 }
 
-.round,
 .button {
-    @apply border-black;
-    @apply border;
-    @apply rounded-tr-lg;
-    @apply rounded-bl-lg;
-    @apply transition-all;
+  @apply bg-slate-200;
+  @apply p-4;
+  @apply hover:rounded-lg;
+  @apply hover:drop-shadow-md;
+  @apply dark:bg-slate-700;
+}
+
+.input,
+.button {
+  @apply rounded-bl-lg;
+  @apply rounded-tr-lg;
+  @apply border;
+  @apply border-black;
+  @apply transition-all;
+  @apply duration-300;
+  @apply dark:border-neutral-300;
 }
