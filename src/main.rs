@@ -12,6 +12,7 @@ use self::confirmation::{confirm_action, send_confirmation_email};
 use self::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
 
+use actix_files::Files;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{
@@ -38,6 +39,21 @@ struct Token {
 #[derive(Deserialize, Debug)]
 struct Email {
     email: String,
+}
+
+fn return_success(message: &str) -> Result<HttpResponse, Error> {
+    let path = webpage_path!().join("success").join("index.html");
+    let template = match fs::read_to_string(&path) {
+        Ok(template) => template,
+        Err(_) => {
+            debug!("file {} is inaccessible", path.display());
+            return Err(Error::Inaccessible);
+        }
+    };
+    let page = template.replace("((%m))", message);
+    return Ok(HttpResponseBuilder::new(StatusCode::OK)
+        .insert_header(ContentType::html())
+        .body(page));
 }
 
 #[actix_web::main]
@@ -68,6 +84,13 @@ async fn main() -> std::io::Result<()> {
             .service(submit)
             .service(confirm)
             .service(delete)
+            .service(
+                Files::new(
+                    "/.well-known",
+                    Path::new(&SETTINGS.root_folder).join(".well-known"),
+                )
+                .use_hidden_files(),
+            )
             .route("/{filename:.*}", web::get().to(index))
     })
     .bind(("127.0.0.1", SETTINGS.port))?
@@ -87,11 +110,11 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, Error> {
             let template = match fs::read_to_string(&path) {
                 Ok(template) => template,
                 Err(_) => {
-                    debug!("file {} is inaccessible", path.display());
+                    debug!("File {} is inaccessible", path.display());
                     return Err(Error::Inaccessible);
                 }
             };
-            let page = template.replace("{{%u}}", SETTINGS.external_url.as_ref());
+            let page = template.replace("((%u))", SETTINGS.external_url.as_ref());
             return Ok(HttpResponseBuilder::new(StatusCode::OK)
                 .insert_header(ContentType::html())
                 .body(page));
@@ -102,7 +125,7 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, Error> {
 }
 
 #[post("/api/submit")]
-async fn submit(pem: web::Form<Key>) -> Result<String> {
+async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, Error> {
     let cert = parse_pem(&pem.key)?;
     let email = get_email_from_cert(&cert)?;
     is_email_allowed(&email)?;
@@ -110,26 +133,29 @@ async fn submit(pem: web::Form<Key>) -> Result<String> {
     store_pending_addition(pem.key.clone(), &email, &token)?;
     send_confirmation_email(&email, &Action::Add, &token)?;
     info!("User {} submitted a key!", &email);
-    Ok(String::from("(0x00) Key submitted successfully!"))
+    return_success("You submitted your key successfully!")
 }
 
 #[get("/api/confirm")]
-async fn confirm(token: web::Query<Token>) -> Result<String> {
+async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, Error> {
     let (action, email) = confirm_action(&token.token)?;
     match action {
-        Action::Add => info!("Key for user {} was added successfully!", email),
-        Action::Delete => info!("Key for user {} was deleted successfully!", email),
+        Action::Add => {
+            info!("Key for user {} was added successfully!", email);
+            return_success("Your key was added successfully!")
+        }
+        Action::Delete => {
+            info!("Key for user {} was deleted successfully!", email);
+            return_success("Your key was deleted successfully!")
+        }
     }
-    Ok(String::from("(0x00) Confirmation successful!"))
 }
 
 #[get("/api/delete")]
-async fn delete(email: web::Query<Email>) -> Result<String> {
+async fn delete(email: web::Query<Email>) -> Result<HttpResponse, Error> {
     let token = gen_random_token();
     store_pending_deletion(email.email.clone(), &token)?;
     send_confirmation_email(&email.email, &Action::Delete, &token)?;
     info!("User {} requested the deletion of his key!", email.email);
-    Ok(String::from(
-        "(0x00) Deletion request submitted successfully!",
-    ))
+    return_success("You requested the deletion of your key successfully!")
 }
