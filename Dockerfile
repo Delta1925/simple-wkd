@@ -1,6 +1,8 @@
 FROM rust:1.68-alpine3.17 AS bin-builder
 
-COPY backend .
+COPY backend backend
+COPY Cargo.lock .
+COPY Cargo.toml .
 RUN apk add --no-cache openssl-dev musl-dev
 RUN cargo build --release
 
