@@ -61,8 +61,8 @@ async fn main() -> std::io::Result<()> {
         }
     });
     info!(
-        "Running server on http://localhost:{} (External URL: {})",
-        SETTINGS.port, SETTINGS.external_url
+        "Running server on http://{}:{} (External URL: {})",
+        SETTINGS.bind_host, SETTINGS.port, SETTINGS.external_url
     );
     HttpServer::new(|| {
         App::new()
@@ -75,7 +75,7 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/{filename:.*}", web::get().to(index))
     })
-    .bind(("127.0.0.1", SETTINGS.port))?
+    .bind((SETTINGS.bind_host.to_string(), SETTINGS.port))?
     .run()
     .await
 }

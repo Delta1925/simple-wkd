@@ -14,6 +14,7 @@ pub struct Settings {
     pub cleanup_interval: u64,
     pub allowed_domains: Vec<String>,
     pub port: u16,
+    pub bind_host: String,
     pub external_url: Url,
     pub mail_settings: MailSettings,
 }

@@ -3,6 +3,7 @@ max_age = 900
 cleanup_interval = 21600
 allowed_domains = ["example.org", "example.com"]
 port = 8080
+bind_host = "0.0.0.0"
 external_url = "http://localhost:8080"
 
 [mail_settings]
