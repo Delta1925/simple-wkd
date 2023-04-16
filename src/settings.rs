@@ -10,7 +10,6 @@ use url::Url;
 pub struct Settings {
     #[serde(with = "VariantDef")]
     pub variant: Variant,
-    pub root_folder: String,
     pub max_age: i64,
     pub cleanup_interval: u64,
     pub allowed_domains: Vec<String>,

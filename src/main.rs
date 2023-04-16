@@ -61,7 +61,7 @@ async fn main() -> std::io::Result<()> {
         }
     });
     info!(
-        "Running server on http://127.0.0.1:{} (External URL: {})",
+        "Running server on http://localhost:{} (External URL: {})",
         SETTINGS.port, SETTINGS.external_url
     );
     HttpServer::new(|| {

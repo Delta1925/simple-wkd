@@ -1,0 +1,10 @@
+*config.toml
+Dockerfile
+README.md
+data/*
+logs/*
+target/*
+website/README.md
+website/dist/*
+website/node_modules/*
+website/.vscode/*
