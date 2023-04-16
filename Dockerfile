@@ -1,13 +1,11 @@
-FROM rust:1.68 AS bin-builder
+FROM rust:1.68-alpine3.17 AS bin-builder
 
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install clang nettle-dev -y
 COPY backend .
+RUN apk add --no-cache openssl-dev musl-dev
 RUN cargo build --release
 
 
-FROM node:19 AS webpage-builder
+FROM node:19-alpine3.17 AS webpage-builder
 
 COPY website .
 RUN npm install -g pnpm && \
@@ -17,12 +15,13 @@ COPY assets assets
 RUN mv dist assets/webpage
 
 
-FROM debian:bullseye-slim
+FROM alpine:3.17
 
-WORKDIR /simplewkd
-RUN adduser --no-create-home simplewkd && \
-    chown -R simplewkd:simplewkd /simplewkd && \
-    chmod -R 777 /simplewkd
-USER simplewkd
+WORKDIR /wkd
+RUN adduser --no-create-home --disabled-password wkd && \
+    chown -R wkd:wkd /wkd
+USER wkd
 COPY --from=webpage-builder assets assets
-COPY --from=bin-builder target/release/simple-wkd simple-wkd
+COPY --from=bin-builder target/release/simple-wkd wkd
+
+ENTRYPOINT [ "/wkd/wkd" ]

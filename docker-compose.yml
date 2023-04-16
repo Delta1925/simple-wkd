@@ -8,9 +8,9 @@ services:
     environment:
       - RUST_LOG=debug
     volumes:
-      - ./config.toml:/simplewkd/config.toml
-      - wkd-data:/simplewkd/data
-      - wkd-logs:/simplewkd/logs
+      - ./config.toml:/wkd/config.toml
+      - wkd-data:/wkd/data
+      - wkd-logs:/wkd/logs
 
 volumes:
   wkd-data:
