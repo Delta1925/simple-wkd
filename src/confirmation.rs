@@ -5,7 +5,7 @@ use log::{debug, error, trace, warn};
 use crate::errors::Error;
 use crate::management::{delete_key, Action, Pending};
 use crate::pending_path;
-use crate::settings::{MAILER, SETTINGS};
+use crate::settings::{MAILER, ROOT_FOLDER, SETTINGS};
 use crate::utils::{get_email_from_cert, get_filename, parse_pem};
 
 use lettre::{Message, Transport};
@@ -63,12 +63,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String), Error> {
                         return Err(Error::ParseEmail);
                     }
                 };
-                match sequoia_net::wkd::insert(
-                    &SETTINGS.root_folder,
-                    domain,
-                    SETTINGS.variant,
-                    &cert,
-                ) {
+                match sequoia_net::wkd::insert(ROOT_FOLDER, domain, SETTINGS.variant, &cert) {
                     Ok(_) => email,
                     Err(_) => {
                         warn!("Unable to create a wkd entry for token {}", token);

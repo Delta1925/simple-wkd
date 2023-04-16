@@ -1,16 +1,24 @@
-use crate::errors::Error;
 use crate::settings::SETTINGS;
+use crate::{errors::Error, settings::ROOT_FOLDER};
 
+use actix_web::{
+    http::{header::ContentType, StatusCode},
+    HttpResponse, HttpResponseBuilder,
+};
 use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record};
+use log::debug;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, policy::StandardPolicy, Cert};
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[macro_export]
 macro_rules! pending_path {
     () => {
-        Path::new(&SETTINGS.root_folder).join("pending")
+        Path::new(&ROOT_FOLDER).join("pending")
     };
 }
 
@@ -82,7 +90,7 @@ pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
 
 pub fn key_exists(email: &str) -> Result<bool, Error> {
     let path = get_user_file_path(email)?;
-    if !Path::new(&SETTINGS.root_folder).join(path).is_file() {
+    if !Path::new(&ROOT_FOLDER).join(path).is_file() {
         return Err(Error::MissingKey);
     }
     Ok(true)
@@ -134,4 +142,23 @@ pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
         ))
         .set_palette("b1;3;2;4;6".to_string())
         .start()
+}
+
+pub fn return_outcome(data: Result<&str, &str>) -> Result<HttpResponse, Error> {
+    let path = webpage_path!().join("status").join("index.html");
+    let template = match fs::read_to_string(&path) {
+        Ok(template) => template,
+        Err(_) => {
+            debug!("file {} is inaccessible", path.display());
+            return Err(Error::Inaccessible);
+        }
+    };
+    let (page, message) = match data {
+        Ok(message) => (template.replace("((%s))", "Success!"), message),
+        Err(message) => (template.replace("((%s))", "Failure!"), message),
+    };
+    let page = page.replace("((%m))", message);
+    return Ok(HttpResponseBuilder::new(StatusCode::OK)
+        .insert_header(ContentType::html())
+        .body(page));
 }

@@ -92,5 +92,6 @@ fn get_mailer() -> SmtpTransport {
     mailer
 }
 
+pub const ROOT_FOLDER: &str = "data";
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);
 pub static MAILER: Lazy<SmtpTransport> = Lazy::new(get_mailer);

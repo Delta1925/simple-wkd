@@ -1,5 +1,7 @@
-use actix_web::http::StatusCode;
+use actix_web::{http::StatusCode, HttpResponseBuilder, ResponseError};
 use thiserror::Error;
+
+use crate::utils::return_outcome;
 
 #[derive(Error, Debug, Clone, Copy)]
 pub enum Error {
@@ -35,7 +37,7 @@ pub enum Error {
     MissingFile,
 }
 
-impl actix_web::ResponseError for Error {
+impl ResponseError for Error {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
             Self::MissingPending => StatusCode::from_u16(404).unwrap(),
@@ -43,6 +45,13 @@ impl actix_web::ResponseError for Error {
             Self::MissingFile => StatusCode::from_u16(404).unwrap(),
             Self::WrongDomain => StatusCode::from_u16(401).unwrap(),
             _ => StatusCode::from_u16(500).unwrap(),
+        }
+    }
+
+    fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
+        match return_outcome(Err(&self.to_string())) {
+            Ok(httpbuilder) => httpbuilder,
+            Err(_) => HttpResponseBuilder::new(self.status_code()).body(self.to_string()),
         }
     }
 }

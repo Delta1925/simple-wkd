@@ -4,13 +4,13 @@ mod management;
 mod settings;
 mod utils;
 
+use crate::confirmation::{confirm_action, send_confirmation_email};
 use crate::errors::Error;
-use crate::settings::SETTINGS;
-use crate::utils::is_email_allowed;
-
-use self::confirmation::{confirm_action, send_confirmation_email};
-use self::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
-use self::utils::{gen_random_token, get_email_from_cert, parse_pem};
+use crate::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
+use crate::settings::{ROOT_FOLDER, SETTINGS};
+use crate::utils::{
+    gen_random_token, get_email_from_cert, is_email_allowed, parse_pem, return_outcome,
+};
 
 use actix_files::Files;
 use actix_web::http::header::ContentType;
@@ -39,21 +39,6 @@ struct Token {
 #[derive(Deserialize, Debug)]
 struct Email {
     email: String,
-}
-
-fn return_success(message: &str) -> Result<HttpResponse, Error> {
-    let path = webpage_path!().join("success").join("index.html");
-    let template = match fs::read_to_string(&path) {
-        Ok(template) => template,
-        Err(_) => {
-            debug!("file {} is inaccessible", path.display());
-            return Err(Error::Inaccessible);
-        }
-    };
-    let page = template.replace("((%m))", message);
-    return Ok(HttpResponseBuilder::new(StatusCode::OK)
-        .insert_header(ContentType::html())
-        .body(page));
 }
 
 #[actix_web::main]
@@ -85,11 +70,8 @@ async fn main() -> std::io::Result<()> {
             .service(confirm)
             .service(delete)
             .service(
-                Files::new(
-                    "/.well-known",
-                    Path::new(&SETTINGS.root_folder).join(".well-known"),
-                )
-                .use_hidden_files(),
+                Files::new("/.well-known", Path::new(&ROOT_FOLDER).join(".well-known"))
+                    .use_hidden_files(),
             )
             .route("/{filename:.*}", web::get().to(index))
     })
@@ -133,7 +115,7 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, Error> {
     store_pending_addition(pem.key.clone(), &email, &token)?;
     send_confirmation_email(&email, &Action::Add, &token)?;
     info!("User {} submitted a key!", &email);
-    return_success("You submitted your key successfully!")
+    return_outcome(Ok("You submitted your key successfully!"))
 }
 
 #[get("/api/confirm")]
@@ -142,11 +124,11 @@ async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, Error> {
     match action {
         Action::Add => {
             info!("Key for user {} was added successfully!", email);
-            return_success("Your key was added successfully!")
+            return_outcome(Ok("Your key was added successfully!"))
         }
         Action::Delete => {
             info!("Key for user {} was deleted successfully!", email);
-            return_success("Your key was deleted successfully!")
+            return_outcome(Ok("Your key was deleted successfully!"))
         }
     }
 }
@@ -157,5 +139,5 @@ async fn delete(email: web::Query<Email>) -> Result<HttpResponse, Error> {
     store_pending_deletion(email.email.clone(), &token)?;
     send_confirmation_email(&email.email, &Action::Delete, &token)?;
     info!("User {} requested the deletion of his key!", email.email);
-    return_success("You requested the deletion of your key successfully!")
+    return_outcome(Ok("You requested the deletion of your key successfully!"))
 }
