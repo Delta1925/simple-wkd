@@ -1,15 +1,19 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import "../styles/global.css";
 import CenterXy from "../components/center-xy.astro";
+import CursorCatcher from "../components/cursor-catcher.astro";
+
+import "../styles/global.css";
 ---
 
 <Layout title="Submit a key">
+  <CursorCatcher id="cursor-catcher" />
   <CenterXy>
     <form
       action="((%u))api/submit"
       method="post"
       class="flex max-w-full flex-col"
+      onsubmit="document.getElementById('submit-button').classList.add('cursor-wait'); document.getElementById('cursor-catcher').classList.remove('hidden')"
     >
       <label for="key" class="text-xl font-bold"
         >Paste your pgp keyblock here:</label
@@ -21,8 +25,11 @@ import CenterXy from "../components/center-xy.astro";
         rows="20"
         class="input mt-3 resize-none"
         placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"
+        spellcheck="false"
         required></textarea>
-      <button type="submit" class="button mt-6 self-end">Submit</button>
+      <button type="submit" id="submit-button" class="button mt-6 self-end"
+        >Submit</button
+      >
     </form>
   </CenterXy>
 </Layout>
