@@ -30,7 +30,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String), Error> {
         trace!("Requested token {} isn't a file", token);
         return Err(Error::MissingPending);
     };
-    let key = match serde_json::from_str::<Pending>(&content) {
+    let key = match toml::from_str::<Pending>(&content) {
         Ok(key) => key,
         Err(_) => {
             warn!("Error while deserializing token {}!", token);

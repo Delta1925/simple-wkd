@@ -55,7 +55,7 @@ impl Pending {
 }
 
 fn store_pending(pending: &Pending, token: &str) -> Result<(), Error> {
-    let serialized = match serde_json::to_string(pending) {
+    let serialized = match toml::to_string(pending) {
         Ok(serialized) => serialized,
         Err(_) => return Err(Error::SerializeData),
     };
@@ -104,7 +104,7 @@ pub fn clean_stale(max_age: i64) {
                     continue;
                 }
             };
-            let key = match serde_json::from_str::<Pending>(&content) {
+            let key = match toml::from_str::<Pending>(&content) {
                 Ok(key) => key,
                 Err(_) => {
                     warn!(
