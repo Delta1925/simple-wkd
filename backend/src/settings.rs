@@ -85,6 +85,7 @@ fn get_mailer() -> SmtpTransport {
     .credentials(creds)
     .port(SETTINGS.mail_settings.smtp_port)
     .build();
+    debug!("Checking connection...");
     if mailer.test_connection().is_err() {
         warn!("Connection test to smtp host failed!");
     }
