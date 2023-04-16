@@ -1,0 +1,9 @@
+---
+export interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+---
+
+<div class="absolute hidden h-full w-full cursor-wait" id={id}></div>

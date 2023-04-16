@@ -1,0 +1,23 @@
+.input {
+  @apply focus:rounded-lg;
+  @apply dark:bg-neutral-800;
+}
+
+.button {
+  @apply bg-slate-200;
+  @apply p-4;
+  @apply hover:rounded-lg;
+  @apply hover:drop-shadow-md;
+  @apply dark:bg-slate-700;
+}
+
+.input,
+.button {
+  @apply rounded-bl-lg;
+  @apply rounded-tr-lg;
+  @apply border;
+  @apply border-black;
+  @apply transition-all;
+  @apply duration-300;
+  @apply dark:border-neutral-300;
+}

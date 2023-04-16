@@ -1,0 +1,35 @@
+---
+import Layout from "../layouts/Layout.astro";
+import CenterXy from "../components/center-xy.astro";
+import CursorCatcher from "../components/cursor-catcher.astro";
+
+import "../styles/global.css";
+---
+
+<Layout title="Delete a key">
+  <CursorCatcher id="cursor-catcher" />
+  <CenterXy>
+    <form
+      action="((%u))api/delete"
+      method="get"
+      class="flex max-w-full flex-col"
+      onsubmit="document.getElementById('submit-button').classList.add('cursor-wait'); document.getElementById('cursor-catcher').classList.remove('hidden')"
+    >
+      <label for="email" class="mt-3 text-xl font-bold"
+        >Request key deletion:</label
+      >
+      <input
+        type="email"
+        name="email"
+        id="email-input"
+        placeholder="user@example.com"
+        size="65"
+        class="input mt-3 focus:rounded-lg"
+        required
+      />
+      <button type="submit" id="submit-button" class="button mt-4 self-end"
+        >Delete</button
+      >
+    </form>
+  </CenterXy>
+</Layout>

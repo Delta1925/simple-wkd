@@ -1,0 +1,24 @@
+{
+  "name": "",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/tailwind": "^3.1.1",
+    "@tailwindcss/forms": "^0.5.3",
+    "astro": "^2.3.0",
+    "astro-critters": "^1.1.31",
+    "tailwindcss": "^3.0.24"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.7",
+    "prettier-plugin-astro": "^0.8.0",
+    "prettier-plugin-tailwindcss": "^0.2.7"
+  }
+}

@@ -1,0 +1,16 @@
+---
+import Layout from "../layouts/Layout.astro";
+import CenterXy from "../components/center-xy.astro";
+
+import "../styles/global.css";
+---
+
+<Layout title="Manage keys">
+  <CenterXy>
+    <h1 class="text-lg font-bold">What would you like to do?</h1>
+    <div class="flex flex-row space-x-6">
+      <a href="/submit" class="button">Submit a key</a>
+      <a href="/delete" class="button">Delete a key</a>
+    </div>
+  </CenterXy>
+</Layout>
