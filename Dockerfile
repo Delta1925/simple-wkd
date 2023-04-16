@@ -3,7 +3,7 @@ FROM rust:1.68 AS bin-builder
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install clang llvm pkg-config nettle-dev -y
-COPY . .
+COPY backend .
 RUN cargo build --release
 
 
@@ -29,5 +29,3 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 USER simplewkd
 COPY --from=webpage-builder assets assets
 COPY --from=bin-builder target/release/simple-wkd simple-wkd
-
-ENTRYPOINT [ "./simple-wkd" ]
