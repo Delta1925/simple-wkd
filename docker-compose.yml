@@ -1,0 +1,17 @@
+version: '3'
+services:
+  keyserver:
+    image: "simple-wkd"
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      - RUST_LOG=debug
+    volumes:
+      - ./config.toml:/simplewkd/config.toml
+      - wkd-data:/simplewkd/data
+      - wkd-logs:/simplewkd/logs
+
+volumes:
+  wkd-data:
+  wkd-logs:

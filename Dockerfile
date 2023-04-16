@@ -2,7 +2,7 @@ FROM rust:1.68 AS bin-builder
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
-    apt-get install clang llvm pkg-config nettle-dev -y
+    apt-get install clang nettle-dev -y
 COPY backend .
 RUN cargo build --release
 
@@ -20,10 +20,7 @@ RUN mv dist assets/webpage
 FROM debian:bullseye-slim
 
 WORKDIR /simplewkd
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install clang llvm pkg-config nettle-dev -y && \
-    rm -rf /var/lib/apt/lists/* && adduser --no-create-home simplewkd && \
+RUN adduser --no-create-home simplewkd && \
     chown -R simplewkd:simplewkd /simplewkd && \
     chmod -R 777 /simplewkd
 USER simplewkd
