@@ -1,9 +1,9 @@
 *config.toml
 Dockerfile
 README.md
-data/*
-logs/*
-target/*
+backend/data/*
+backend/logs/*
+backend/target/*
 website/README.md
 website/dist/*
 website/node_modules/*

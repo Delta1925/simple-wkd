@@ -1,5 +1,1 @@
-/target
-/data
-/logs
-/config.toml
-/assets/webpage
+config.toml
