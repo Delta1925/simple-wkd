@@ -1,50 +1,69 @@
 use actix_web::{http::StatusCode, HttpResponseBuilder, ResponseError};
-use thiserror::Error;
+use anyhow::Error;
+use std::fmt::Display;
+use thiserror::Error as DeriveError;
 
 use crate::utils::return_outcome;
 
-#[derive(Error, Debug, Clone, Copy)]
-pub enum Error {
-    #[error("(0x01) Cert is invalid")]
-    InvalidCert,
-    #[error("(0x02) Error while parsing cert")]
-    ParseCert,
-    #[error("(0x03) Error while parsing an E-Mail address")]
-    ParseEmail,
-    #[error("(0x04) There is no pending request associated to this token")]
-    MissingPending,
-    #[error("(0x05) Requested key does not exist")]
-    MissingKey,
-    #[error("(0x06) No E-Mail found in the certificate")]
-    MissingMail,
-    #[error("(0x07) Error while sending the E-Mail")]
-    SendMail,
-    #[error("(0x08) rror while serializing data")]
-    SerializeData,
-    #[error("(0x09) Error while deserializing data")]
-    DeserializeData,
-    #[error("(0x0A) The file is inaccessible")]
-    Inaccessible,
-    #[error("(0x0B) Error while adding a key to the wkd")]
-    AddingKey,
-    #[error("(0x0C) Error while generating the wkd path")]
-    PathGeneration,
-    #[error("(0x0D) Error while generating the email")]
-    MailGeneration,
-    #[error("(0x0E) Wrong email domain")]
-    WrongDomain,
-    #[error("(0x0F) The requested file does not exist")]
+#[derive(Debug, DeriveError)]
+pub enum SpecialErrors {
+    #[error("The request had expired!")]
+    ExpiredRequest,
+    #[error("The key for the requested user does not exist!")]
+    InexistingUser,
+    #[error("Could not parse user email: malformed email")]
+    MalformedEmail,
+    #[error("Could not find any primay user email in the keyblock!")]
+    MalformedCert,
+    #[error("The requested file does not exist!")]
     MissingFile,
+    #[error("User email rejected: domain not allowed")]
+    UnallowedDomain,
 }
 
-impl ResponseError for Error {
+#[derive(Debug)]
+pub enum CompatErr {
+    AnyhowErr(Error),
+    SpecialErr(SpecialErrors),
+}
+
+impl Display for CompatErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AnyhowErr(error) => write!(f, "{}", error),
+            Self::SpecialErr(error) => write!(f, "{}", error),
+        }
+    }
+}
+
+impl From<SpecialErrors> for CompatErr {
+    fn from(value: SpecialErrors) -> Self {
+        CompatErr::SpecialErr(value)
+    }
+}
+
+impl From<Error> for CompatErr {
+    fn from(value: Error) -> Self {
+        if value.is::<SpecialErrors>() {
+            CompatErr::from(value.downcast::<SpecialErrors>().unwrap())
+        } else {
+            CompatErr::AnyhowErr(value)
+        }
+    }
+}
+
+impl ResponseError for CompatErr {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
-            Self::MissingPending => StatusCode::from_u16(404).unwrap(),
-            Self::MissingKey => StatusCode::from_u16(404).unwrap(),
-            Self::MissingFile => StatusCode::from_u16(404).unwrap(),
-            Self::WrongDomain => StatusCode::from_u16(401).unwrap(),
-            _ => StatusCode::from_u16(500).unwrap(),
+        Self::AnyhowErr(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Self::SpecialErr(error) => match error {
+            SpecialErrors::ExpiredRequest => StatusCode::BAD_REQUEST,
+            SpecialErrors::InexistingUser => StatusCode::NOT_FOUND,
+            SpecialErrors::MalformedCert => StatusCode::BAD_REQUEST,
+            SpecialErrors::MalformedEmail => StatusCode::BAD_REQUEST,
+            SpecialErrors::MissingFile => StatusCode::NOT_FOUND,
+            SpecialErrors::UnallowedDomain => StatusCode::UNAUTHORIZED,
+        }
         }
     }
 

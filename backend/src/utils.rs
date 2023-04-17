@@ -1,12 +1,15 @@
+use crate::errors::SpecialErrors;
+use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
-use crate::{errors::Error, settings::ROOT_FOLDER};
 
 use actix_web::{
     http::{header::ContentType, StatusCode},
     HttpResponse, HttpResponseBuilder,
 };
-use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record};
-use log::debug;
+use anyhow::{anyhow, bail, Result};
+use flexi_logger::{
+    detailed_format, style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record,
+};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, policy::StandardPolicy, Cert};
@@ -29,26 +32,29 @@ macro_rules! webpage_path {
     };
 }
 
-pub fn is_email_allowed(email: &str) -> Result<(), Error> {
+pub fn read_file(path: &PathBuf) -> Result<String> {
+    if path.is_file() {
+        Ok(fs::read_to_string(path)?)
+    } else {
+        Err(SpecialErrors::MissingFile)?
+    }
+}
+
+pub fn is_email_allowed(email: &str) -> Result<()> {
     let allowed = match email.split('@').last() {
         Some(domain) => SETTINGS.allowed_domains.contains(&domain.to_string()),
-        None => return Err(Error::ParseEmail),
+        None => Err(SpecialErrors::MalformedEmail)?,
     };
     if !allowed {
-        return Err(Error::WrongDomain);
+        Err(SpecialErrors::UnallowedDomain)?;
     }
     Ok(())
 }
 
-pub fn parse_pem(pemfile: &str) -> Result<Cert, Error> {
-    let cert = match sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()) {
-        Ok(cert) => cert,
-        Err(_) => return Err(Error::ParseCert),
-    };
+pub fn parse_pem(pemfile: &str) -> Result<Cert> {
+    let cert = sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes())?;
     let policy = StandardPolicy::new();
-    if cert.with_policy(&policy, None).is_err() {
-        return Err(Error::InvalidCert);
-    };
+    cert.with_policy(&policy, None)?;
     Ok(cert)
 }
 
@@ -57,46 +63,31 @@ pub fn gen_random_token() -> String {
     (0..10).map(|_| rng.sample(Alphanumeric) as char).collect()
 }
 
-pub fn get_email_from_cert(cert: &Cert) -> Result<String, Error> {
+pub fn get_email_from_cert(cert: &Cert) -> Result<String> {
     let policy = StandardPolicy::new();
-    let validcert = match cert.with_policy(&policy, None) {
-        Ok(validcert) => validcert,
-        Err(_) => return Err(Error::InvalidCert),
-    };
-    let userid_opt = match validcert.primary_userid() {
-        Ok(userid_opt) => userid_opt,
-        Err(_) => return Err(Error::ParseCert),
-    };
-    let email_opt = match userid_opt.email() {
-        Ok(email_opt) => email_opt,
-        Err(_) => return Err(Error::ParseCert),
-    };
+    let validcert = cert.with_policy(&policy, None)?;
+    let userid_opt = validcert.primary_userid()?;
+    let email_opt = userid_opt.email()?;
     match email_opt {
         Some(email) => Ok(email),
-        None => Err(Error::MissingMail),
+        None => Err(SpecialErrors::MalformedCert)?,
     }
 }
 
-pub fn get_user_file_path(email: &str) -> Result<PathBuf, Error> {
-    let wkd_url = match Url::from(email) {
-        Ok(wkd_url) => wkd_url,
-        Err(_) => return Err(Error::PathGeneration),
-    };
-    match wkd_url.to_file_path(SETTINGS.variant) {
-        Ok(path) => Ok(path),
-        Err(_) => Err(Error::PathGeneration),
-    }
+pub fn get_user_file_path(email: &str) -> Result<PathBuf> {
+    let wkd_url = Url::from(email)?;
+    wkd_url.to_file_path(SETTINGS.variant)
 }
 
-pub fn key_exists(email: &str) -> Result<bool, Error> {
+pub fn key_exists(email: &str) -> Result<bool> {
     let path = get_user_file_path(email)?;
     if !Path::new(&ROOT_FOLDER).join(path).is_file() {
-        return Err(Error::MissingKey);
+        Err(SpecialErrors::InexistingUser)?
     }
     Ok(true)
 }
 
-pub fn get_filename(path: &Path) -> Option<&str> {
+pub fn _get_filename(path: &Path) -> Option<&str> {
     path.file_name()?.to_str()
 }
 
@@ -135,7 +126,7 @@ pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
     Logger::try_with_env_or_str("simple_wkd=debug")?
         .log_to_file(FileSpec::default().directory("logs"))
         .duplicate_to_stdout(flexi_logger::Duplicate::All)
-        .format_for_files(custom_monochrome_format)
+        .format_for_files(detailed_format)
         .adaptive_format_for_stdout(flexi_logger::AdaptiveFormat::Custom(
             custom_monochrome_format,
             custom_color_format,
@@ -144,15 +135,9 @@ pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
         .start()
 }
 
-pub fn return_outcome(data: Result<&str, &str>) -> Result<HttpResponse, Error> {
+pub fn return_outcome(data: Result<&str, &str>) -> Result<HttpResponse> {
     let path = webpage_path!().join("status").join("index.html");
-    let template = match fs::read_to_string(&path) {
-        Ok(template) => template,
-        Err(_) => {
-            debug!("file {} is inaccessible", path.display());
-            return Err(Error::Inaccessible);
-        }
-    };
+    let template = read_file(&path)?;
     let (page, message) = match data {
         Ok(message) => (template.replace("((%s))", "Success!"), message),
         Err(message) => (template.replace("((%s))", "Failure!"), message),
