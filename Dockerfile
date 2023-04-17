@@ -5,6 +5,7 @@ RUN apk add --no-cache openssl-dev openssl-libs-static musl-dev
 
 # This will build all dependencies and store them in docker's cache.
 # This way, it won't be necessary to recompile everything everytime
+# OPENSSL_STATIC is required, see: https://users.rust-lang.org/t/sigsegv-with-program-linked-against-openssl-in-an-alpine-container/52172 and https://users.rust-lang.org/t/how-to-link-openssl-statically/14912
 COPY backend/Cargo.toml .
 COPY backend/Cargo.lock .
 RUN echo '[[bin]]' >> Cargo.toml && \
