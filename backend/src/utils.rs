@@ -1,18 +1,21 @@
+use crate::errors::CompatErr;
 use crate::errors::SpecialErrors;
+use crate::settings::POLICY;
 use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
 
+use actix_web::ResponseError;
 use actix_web::{
     http::{header::ContentType, StatusCode},
     HttpResponse, HttpResponseBuilder,
 };
-use anyhow::{anyhow, bail, Result};
+use anyhow::Result;
 use flexi_logger::{
     detailed_format, style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record,
 };
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
-use sequoia_openpgp::{parse::Parse, policy::StandardPolicy, Cert};
+use sequoia_openpgp::{parse::Parse, Cert};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -29,6 +32,16 @@ macro_rules! pending_path {
 macro_rules! webpage_path {
     () => {
         Path::new("assets").join("webpage")
+    };
+}
+
+#[macro_export]
+macro_rules! validate_cert {
+    ( $x:expr ) => {
+        match $x.with_policy(POLICY, None) {
+            Ok(validcert) => Ok(validcert),
+            Err(_) => Err(SpecialErrors::InvalidCert),
+        }
     };
 }
 
@@ -52,9 +65,11 @@ pub fn is_email_allowed(email: &str) -> Result<()> {
 }
 
 pub fn parse_pem(pemfile: &str) -> Result<Cert> {
-    let cert = sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes())?;
-    let policy = StandardPolicy::new();
-    cert.with_policy(&policy, None)?;
+    let cert = match sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()) {
+        Ok(cert) => cert,
+        Err(_) => Err(SpecialErrors::MalformedCert)?,
+    };
+    validate_cert!(cert)?;
     Ok(cert)
 }
 
@@ -64,13 +79,12 @@ pub fn gen_random_token() -> String {
 }
 
 pub fn get_email_from_cert(cert: &Cert) -> Result<String> {
-    let policy = StandardPolicy::new();
-    let validcert = cert.with_policy(&policy, None)?;
+    let validcert = validate_cert!(cert)?;
     let userid_opt = validcert.primary_userid()?;
     let email_opt = userid_opt.email()?;
     match email_opt {
         Some(email) => Ok(email),
-        None => Err(SpecialErrors::MalformedCert)?,
+        None => Err(SpecialErrors::EmailMissing)?,
     }
 }
 
@@ -135,15 +149,19 @@ pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
         .start()
 }
 
-pub fn return_outcome(data: Result<&str, &str>) -> Result<HttpResponse> {
+pub fn return_outcome(data: Result<&str, &CompatErr>) -> Result<HttpResponse> {
     let path = webpage_path!().join("status").join("index.html");
     let template = read_file(&path)?;
     let (page, message) = match data {
-        Ok(message) => (template.replace("((%s))", "Success!"), message),
-        Err(message) => (template.replace("((%s))", "Failure!"), message),
+        Ok(message) => (template.replace("((%s))", "Success!"), message.to_string()),
+        Err(error) => (template.replace("((%s))", "Failure!"), error.to_string()),
     };
-    let page = page.replace("((%m))", message);
-    return Ok(HttpResponseBuilder::new(StatusCode::OK)
+    let status_code = match data {
+        Ok(_) => StatusCode::OK,
+        Err(error) => error.status_code(),
+    };
+    let page = page.replace("((%m))", &message);
+    return Ok(HttpResponseBuilder::new(status_code)
         .insert_header(ContentType::html())
         .body(page));
 }

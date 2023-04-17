@@ -9,7 +9,7 @@ use crate::errors::CompatErr;
 use crate::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use crate::settings::{ROOT_FOLDER, SETTINGS};
 use crate::utils::{
-    gen_random_token, get_email_from_cert, is_email_allowed, parse_pem, return_outcome, read_file,
+    gen_random_token, get_email_from_cert, is_email_allowed, parse_pem, read_file, return_outcome,
 };
 
 use actix_files::Files;
@@ -18,7 +18,6 @@ use actix_web::http::StatusCode;
 use actix_web::{
     get, post, web, App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Result,
 };
-use anyhow::anyhow;
 use errors::SpecialErrors;
 use serde::Deserialize;
 use std::env;
@@ -108,12 +107,8 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
 async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
     let (action, _email) = confirm_action(&token.token)?;
     match action {
-        Action::Add => {
-            Ok(return_outcome(Ok("Your key was added successfully!"))?)
-        }
-        Action::Delete => {
-            Ok(return_outcome(Ok("Your key was deleted successfully!"))?)
-        }
+        Action::Add => Ok(return_outcome(Ok("Your key was added successfully!"))?),
+        Action::Delete => Ok(return_outcome(Ok("Your key was deleted successfully!"))?),
     }
 }
 
@@ -122,5 +117,7 @@ async fn delete(email: web::Query<Email>) -> Result<HttpResponse, CompatErr> {
     let token = gen_random_token();
     store_pending_deletion(email.email.clone(), &token)?;
     send_confirmation_email(&email.email, &Action::Delete, &token)?;
-    Ok(return_outcome(Ok("You requested the deletion of your key successfully!"))?)
+    Ok(return_outcome(Ok(
+        "You requested the deletion of your key successfully!",
+    ))?)
 }

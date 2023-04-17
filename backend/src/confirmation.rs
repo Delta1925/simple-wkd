@@ -6,7 +6,7 @@ use crate::management::{delete_key, Action, Pending};
 use crate::pending_path;
 use crate::settings::{MAILER, ROOT_FOLDER, SETTINGS};
 use crate::utils::{get_email_from_cert, parse_pem, read_file};
-use anyhow::{anyhow, bail, Result};
+use anyhow::Result;
 
 use lettre::{Message, Transport};
 use std::fs;
@@ -26,9 +26,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String)> {
                 let email = get_email_from_cert(&cert)?;
                 let domain = match email.split('@').last() {
                     Some(domain) => domain.to_string(),
-                    None => {
-                        Err(SpecialErrors::MalformedEmail)?
-                    }
+                    None => Err(SpecialErrors::MalformedEmail)?,
                 };
                 sequoia_net::wkd::insert(ROOT_FOLDER, domain, SETTINGS.variant, &cert)?;
                 email
@@ -59,7 +57,10 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
                 panic!("Unable to parse the email in the settings!")
             }
         })
-        .to(address.parse()?)
+        .to(match address.parse() {
+            Ok(mbox) => mbox,
+            Err(_) => Err(SpecialErrors::MalformedEmail)?,
+        })
         .subject(
             SETTINGS
                 .mail_settings

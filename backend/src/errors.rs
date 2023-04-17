@@ -7,14 +7,18 @@ use crate::utils::return_outcome;
 
 #[derive(Debug, DeriveError)]
 pub enum SpecialErrors {
+    #[error("Could not find any primay user email in the keyblock!")]
+    EmailMissing,
     #[error("The request had expired!")]
     ExpiredRequest,
     #[error("The key for the requested user does not exist!")]
     InexistingUser,
+    #[error("The key is either expired or uses an obsolete cipher!")]
+    InvalidCert,
+    #[error("Could not parse keyblock")]
+    MalformedCert,
     #[error("Could not parse user email: malformed email")]
     MalformedEmail,
-    #[error("Could not find any primay user email in the keyblock!")]
-    MalformedCert,
     #[error("The requested file does not exist!")]
     MissingFile,
     #[error("User email rejected: domain not allowed")]
@@ -55,20 +59,22 @@ impl From<Error> for CompatErr {
 impl ResponseError for CompatErr {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
-        Self::AnyhowErr(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        Self::SpecialErr(error) => match error {
-            SpecialErrors::ExpiredRequest => StatusCode::BAD_REQUEST,
-            SpecialErrors::InexistingUser => StatusCode::NOT_FOUND,
-            SpecialErrors::MalformedCert => StatusCode::BAD_REQUEST,
-            SpecialErrors::MalformedEmail => StatusCode::BAD_REQUEST,
-            SpecialErrors::MissingFile => StatusCode::NOT_FOUND,
-            SpecialErrors::UnallowedDomain => StatusCode::UNAUTHORIZED,
-        }
+            Self::AnyhowErr(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::SpecialErr(error) => match error {
+                SpecialErrors::ExpiredRequest => StatusCode::BAD_REQUEST,
+                SpecialErrors::InexistingUser => StatusCode::NOT_FOUND,
+                SpecialErrors::InvalidCert => StatusCode::BAD_REQUEST,
+                SpecialErrors::EmailMissing => StatusCode::BAD_REQUEST,
+                SpecialErrors::MalformedCert => StatusCode::BAD_REQUEST,
+                SpecialErrors::MalformedEmail => StatusCode::BAD_REQUEST,
+                SpecialErrors::MissingFile => StatusCode::NOT_FOUND,
+                SpecialErrors::UnallowedDomain => StatusCode::UNAUTHORIZED,
+            },
         }
     }
 
     fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
-        match return_outcome(Err(&self.to_string())) {
+        match return_outcome(Err(self)) {
             Ok(httpbuilder) => httpbuilder,
             Err(_) => HttpResponseBuilder::new(self.status_code()).body(self.to_string()),
         }

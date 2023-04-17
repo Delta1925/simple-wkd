@@ -1,8 +1,9 @@
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
+use sequoia_openpgp::policy::StandardPolicy;
 use serde::{Deserialize, Serialize};
-use std::{path::{PathBuf}};
+use std::path::PathBuf;
 use url::Url;
 
 use crate::utils::read_file;
@@ -84,6 +85,7 @@ fn get_mailer() -> SmtpTransport {
     mailer
 }
 
+pub const POLICY: &StandardPolicy = &StandardPolicy::new();
 pub const ROOT_FOLDER: &str = "data";
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);
 pub static MAILER: Lazy<SmtpTransport> = Lazy::new(get_mailer);
