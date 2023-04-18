@@ -1,5 +1,0 @@
-{
-  "environment": [
-    { "name": "RUSTLOG", "value": "simple_wkd=trace" },
-  ]
-}

@@ -1,13 +1,18 @@
 {
-	"folders": [
-		{
-			"path": "website"
-		},
-		{
-			"path": "backend"
-		},
-		{
-			"path": "."
-		}
-	]
+  "folders": [
+    {
+      "path": "website"
+    },
+    {
+      "path": "backend"
+    },
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+	"rust-analyzer.runnableEnv": {
+		"RUST_LOG": "simple_wkd=trace"
+	}
+  }
 }
