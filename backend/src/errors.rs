@@ -44,6 +44,8 @@ pub enum SpecialErrors {
     InexistingUser,
     #[error("The key is either expired or uses an obsolete cipher!")]
     InvalidCert,
+    #[error("Error while sending email")]
+    MailErr,
     #[error("Could not parse keyblock")]
     MalformedCert,
     #[error("Could not parse user email: malformed email")]
@@ -94,6 +96,7 @@ impl ResponseError for CompatErr {
                 SpecialErrors::InexistingUser => StatusCode::NOT_FOUND,
                 SpecialErrors::InvalidCert => StatusCode::BAD_REQUEST,
                 SpecialErrors::EmailMissing => StatusCode::BAD_REQUEST,
+                SpecialErrors::MailErr => StatusCode::INTERNAL_SERVER_ERROR,
                 SpecialErrors::MalformedCert => StatusCode::BAD_REQUEST,
                 SpecialErrors::MalformedEmail => StatusCode::BAD_REQUEST,
                 SpecialErrors::MissingFile => StatusCode::NOT_FOUND,

@@ -77,6 +77,8 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
 
     let email = log_err!(email, warn)?;
 
-    log_err!(MAILER.send(&email), warn)?;
-    Ok(())
+    match log_err!(MAILER.send(&email), warn){
+        Ok(_) => Ok(()),
+        Err(_) => Err(SpecialErrors::MailErr)?
+    }
 }
