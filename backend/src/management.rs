@@ -1,6 +1,5 @@
-use crate::pending_path;
 use crate::settings::ROOT_FOLDER;
-use crate::utils::{get_user_file_path, key_exists, read_file};
+use crate::utils::{get_user_file_path, key_exists, read_file, pending_path};
 
 use anyhow::Result;
 use chrono::Utc;
@@ -55,7 +54,7 @@ impl Pending {
 
 fn store_pending(pending: &Pending, token: &str) -> Result<()> {
     let serialized = toml::to_string(pending)?;
-    fs::write(pending_path!().join(token), serialized)?;
+    fs::write(pending_path().join(token), serialized)?;
     Ok(())
 }
 
@@ -73,7 +72,7 @@ pub fn store_pending_deletion(email: String, token: &str) -> Result<()> {
 }
 
 pub fn clean_stale(max_age: i64) {
-    for path in fs::read_dir(pending_path!()).unwrap().flatten() {
+    for path in fs::read_dir(pending_path()).unwrap().flatten() {
         let file_path = path.path();
         let content = match read_file(&file_path) {
             Ok(content) => content,

@@ -22,20 +22,6 @@ use std::{
 };
 
 #[macro_export]
-macro_rules! pending_path {
-    () => {
-        Path::new(&ROOT_FOLDER).join("pending")
-    };
-}
-
-#[macro_export]
-macro_rules! webpage_path {
-    () => {
-        Path::new("assets").join("webpage")
-    };
-}
-
-#[macro_export]
 macro_rules! validate_cert {
     ( $x:expr ) => {
         match $x.with_policy(POLICY, None) {
@@ -43,6 +29,14 @@ macro_rules! validate_cert {
             Err(_) => Err(SpecialErrors::InvalidCert),
         }
     };
+}
+
+pub fn pending_path() -> PathBuf {
+    Path::new(&ROOT_FOLDER).join("pending")
+}
+
+pub fn webpage_path() -> PathBuf {
+    Path::new("assets").join("webpage")
 }
 
 pub fn read_file(path: &PathBuf) -> Result<String> {
@@ -101,10 +95,6 @@ pub fn key_exists(email: &str) -> Result<bool> {
     Ok(true)
 }
 
-pub fn _get_filename(path: &Path) -> Option<&str> {
-    path.file_name()?.to_str()
-}
-
 pub fn custom_color_format(
     w: &mut dyn std::io::Write,
     now: &mut DeferredNow,
@@ -150,7 +140,7 @@ pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
 }
 
 pub fn return_outcome(data: Result<&str, &CompatErr>) -> Result<HttpResponse> {
-    let path = webpage_path!().join("status").join("index.html");
+    let path = webpage_path().join("status").join("index.html");
     let template = read_file(&path)?;
     let (page, message) = match data {
         Ok(message) => (template.replace("((%s))", "Success!"), message.to_string()),

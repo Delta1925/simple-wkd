@@ -24,7 +24,7 @@ use std::env;
 use std::fs;
 use std::path::Path;
 use tokio::{task, time};
-use utils::init_logger;
+use utils::{init_logger, pending_path, webpage_path};
 
 #[derive(Deserialize, Debug)]
 struct Key {
@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
     if init_logger().is_err() {
         panic!("Could not set up logger!")
     };
-    fs::create_dir_all(pending_path!())?;
+    fs::create_dir_all(pending_path())?;
     task::spawn(async {
         let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
@@ -74,7 +74,7 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
-    let path = webpage_path!().join(req.match_info().query("filename"));
+    let path = webpage_path().join(req.match_info().query("filename"));
     for file in &["", "index.html"] {
         let path = if file.is_empty() {
             path.to_owned()

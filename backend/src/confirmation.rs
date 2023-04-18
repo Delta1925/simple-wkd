@@ -13,7 +13,7 @@ use std::fs;
 use std::path::Path;
 
 pub fn confirm_action(token: &str) -> Result<(Action, String)> {
-    let pending_path = pending_path!().join(token);
+    let pending_path = pending_path().join(token);
     let content = read_file(&pending_path)?;
     let key = toml::from_str::<Pending>(&content)?;
     if Utc::now().timestamp() - key.timestamp() > SETTINGS.max_age {
