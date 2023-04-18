@@ -1,6 +1,6 @@
 use crate::log_err;
 use crate::settings::{ERROR_TEXT, ROOT_FOLDER};
-use crate::utils::{get_user_file_path, key_exists, pending_path, read_file};
+use crate::utils::{get_user_file_path, pending_path, read_file};
 
 use anyhow::Result;
 use chrono::Utc;
@@ -67,7 +67,6 @@ pub fn store_pending_addition(pem: String, _email: &str, token: &str) -> Result<
 }
 
 pub fn store_pending_deletion(email: String, token: &str) -> Result<()> {
-    key_exists(&email)?;
     let pending = Pending::build_delete(email);
     store_pending(&pending, token)?;
     Ok(())

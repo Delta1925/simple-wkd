@@ -10,7 +10,7 @@ use crate::errors::SpecialErrors;
 use crate::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use crate::settings::{ROOT_FOLDER, SETTINGS};
 use crate::utils::{
-    gen_random_token, get_email_from_cert, is_email_allowed, parse_pem, read_file, return_outcome,
+    gen_random_token, get_email_from_cert, is_email_allowed, parse_pem, read_file, return_outcome, key_exists,
 };
 
 use actix_files::Files;
@@ -102,6 +102,7 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
 async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
     let cert = parse_pem(&pem.key)?;
     let email = get_email_from_cert(&cert)?;
+    debug!("Handling user {} request to add a key...", email);
     is_email_allowed(&email)?;
     let token = gen_random_token();
     store_pending_addition(pem.key.clone(), &email, &token)?;
@@ -113,6 +114,7 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
 
 #[get("/api/confirm")]
 async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
+    debug!("Handling token {}...", token.token);
     let (action, email) = confirm_action(&token.token)?;
     info!("User {} confirmed to {} his key successfully!", email, action.to_string().to_lowercase());
     match action {
@@ -123,6 +125,8 @@ async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
 
 #[get("/api/delete")]
 async fn delete(email: web::Query<Email>) -> Result<HttpResponse, CompatErr> {
+    debug!("Handling user {} request to add a key...", email.email);
+    key_exists(&email.email)?;
     let token = gen_random_token();
     store_pending_deletion(email.email.clone(), &token)?;
     debug!("Sending email to {} to add a key... (Request token: {})", email.email, token);
