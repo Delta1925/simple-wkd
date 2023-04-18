@@ -5,6 +5,31 @@ use thiserror::Error as DeriveError;
 
 use crate::utils::return_outcome;
 
+#[macro_export]
+macro_rules! log_err {
+    ($var: expr, $level: ident) => {{
+        let test = $var;
+        if test.is_err() {
+            $level!("{} {}", $crate::settings::ERROR_TEXT, test.as_ref().unwrap_err());
+            test
+        } else {
+            test
+        }
+    }};
+    ($var: expr, $level: ident, $panic: expr) => {{
+        let test = $var;
+        if log_err!(test, $level).is_err() {
+            if $panic == true {
+                panic!("{} {}", $crate::settings::ERROR_TEXT, test.unwrap_err());
+            } else {
+                test
+            }
+        } else {
+            $var
+        }
+    }};
+}
+
 #[derive(Debug, DeriveError)]
 pub enum SpecialErrors {
     #[error("Could not find any primay user email in the keyblock!")]

@@ -85,6 +85,7 @@ fn get_mailer() -> SmtpTransport {
     mailer
 }
 
+pub const ERROR_TEXT: &str = "An error occoured:";
 pub const POLICY: &StandardPolicy = &StandardPolicy::new();
 pub const ROOT_FOLDER: &str = "data";
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);
