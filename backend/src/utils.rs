@@ -1,6 +1,5 @@
 use crate::errors::CompatErr;
 use crate::errors::SpecialErrors;
-use crate::settings::POLICY;
 use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
 
@@ -24,12 +23,13 @@ use std::{
 #[macro_export]
 macro_rules! validate_cert {
     ( $x:expr ) => {
-        match $x.with_policy(POLICY, None) {
+        match $x.with_policy($crate::settings::POLICY, None) {
             Ok(validcert) => Ok(validcert),
-            Err(_) => Err(SpecialErrors::InvalidCert),
+            Err(_) => Err($crate::errors::SpecialErrors::InvalidCert),
         }
     };
 }
+
 
 pub fn pending_path() -> PathBuf {
     Path::new(&ROOT_FOLDER).join("pending")
