@@ -10,7 +10,7 @@ use actix_web::{
 };
 use anyhow::Result;
 use flexi_logger::{
-    detailed_format, style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record,
+    style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record,
 };
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
@@ -126,11 +126,28 @@ pub fn custom_monochrome_format(
     )
 }
 
+pub fn custom_file_format(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "[{}] [{}] {} {}:{}: {}",
+        now.format("%Y-%m-%d %H:%M:%S"),
+        record.module_path().unwrap_or("<unnamed>"),
+        record.level(),
+        record.file().unwrap_or("<unnamed>"),
+        record.line().unwrap_or(0),
+        &record.args()
+    )
+}
+
 pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
     Logger::try_with_env_or_str("simple_wkd=debug")?
         .log_to_file(FileSpec::default().directory("logs"))
         .duplicate_to_stdout(flexi_logger::Duplicate::All)
-        .format_for_files(detailed_format)
+        .format_for_files(custom_file_format)
         .adaptive_format_for_stdout(flexi_logger::AdaptiveFormat::Custom(
             custom_monochrome_format,
             custom_color_format,
