@@ -1,6 +1,6 @@
 use chrono::Utc;
 use lettre::message::header::ContentType;
-use log::{warn, debug};
+use log::{debug, error, warn};
 
 use crate::errors::SpecialErrors;
 use crate::management::{delete_key, Action, Pending};
@@ -15,10 +15,11 @@ use std::path::Path;
 
 pub fn confirm_action(token: &str) -> Result<(Action, String)> {
     let pending_path = pending_path().join(token);
-    let content = read_file(&pending_path)?;
+    let content = log_err!(read_file(&pending_path), debug)?;
     let key = log_err!(toml::from_str::<Pending>(&content), warn)?;
     if Utc::now().timestamp() - key.timestamp() > SETTINGS.max_age {
         log_err!(fs::remove_file(&pending_path), warn)?;
+        debug!("Token {} was stale", token);
         Err(SpecialErrors::ExpiredRequest)?
     } else {
         let address = match key.action() {
@@ -43,7 +44,11 @@ pub fn confirm_action(token: &str) -> Result<(Action, String)> {
 }
 
 pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> Result<()> {
-    let template = read_file(&Path::new("assets").join("mail-template.html"))?;
+    let template = log_err!(
+        read_file(&Path::new("assets").join("mail-template.html")),
+        error,
+        true
+    )?;
     let mut url = SETTINGS
         .external_url
         .join("api/")
@@ -77,8 +82,8 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
 
     let email = log_err!(email, warn)?;
 
-    match log_err!(MAILER.send(&email), warn){
+    match log_err!(MAILER.send(&email), warn) {
         Ok(_) => Ok(()),
-        Err(_) => Err(SpecialErrors::MailErr)?
+        Err(_) => Err(SpecialErrors::MailErr)?,
     }
 }

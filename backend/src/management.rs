@@ -77,7 +77,8 @@ pub fn clean_stale(max_age: i64) {
         let file_path = path.path();
         let content = match read_file(&file_path) {
             Ok(content) => content,
-            Err(_) => {
+            Err(error) => {
+                warn!("{} {}", ERROR_TEXT, error);
                 continue;
             }
         };

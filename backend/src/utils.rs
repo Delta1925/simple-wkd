@@ -12,8 +12,7 @@ use actix_web::{
 use anyhow::Result;
 use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record};
 use log::debug;
-use log::trace;
-use log::warn;
+use log::error;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, Cert};
@@ -42,9 +41,8 @@ pub fn webpage_path() -> PathBuf {
 
 pub fn read_file(path: &PathBuf) -> Result<String> {
     if path.is_file() {
-        Ok(log_err!(fs::read_to_string(path), warn)?)
+        Ok(fs::read_to_string(path)?)
     } else {
-        trace!("The requested file {} does not exist", path.display());
         Err(SpecialErrors::MissingFile)?
     }
 }
@@ -171,7 +169,7 @@ pub fn init_logger() -> Result<LoggerHandle, FlexiLoggerError> {
 
 pub fn return_outcome(data: Result<&str, &CompatErr>) -> Result<HttpResponse> {
     let path = webpage_path().join("status").join("index.html");
-    let template = read_file(&path)?;
+    let template = log_err!(read_file(&path), error, true)?;
     let (page, message) = match data {
         Ok(message) => (template.replace("((%s))", "Success!"), message.to_string()),
         Err(error) => (template.replace("((%s))", "Failure!"), error.to_string()),

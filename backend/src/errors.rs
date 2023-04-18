@@ -22,7 +22,7 @@ macro_rules! log_err {
     }};
     ($var: expr, $level: ident, $panic: expr) => {{
         let test = $var;
-        if log_err!(test, $level).is_err() {
+        if log_err!(&test, $level).is_err() {
             if $panic == true {
                 panic!("{} {}", $crate::settings::ERROR_TEXT, test.unwrap_err());
             } else {

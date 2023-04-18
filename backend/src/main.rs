@@ -10,7 +10,8 @@ use crate::errors::SpecialErrors;
 use crate::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use crate::settings::{ROOT_FOLDER, SETTINGS};
 use crate::utils::{
-    gen_random_token, get_email_from_cert, is_email_allowed, parse_pem, read_file, return_outcome, key_exists,
+    gen_random_token, get_email_from_cert, is_email_allowed, key_exists, parse_pem, read_file,
+    return_outcome,
 };
 
 use actix_files::Files;
@@ -70,7 +71,6 @@ async fn main() -> std::io::Result<()> {
     })
     .bind((SETTINGS.bind_host.to_string(), SETTINGS.port))?
     .run();
-    debug!("Server started successfully!");
     info!(
         "Listening on: {}:{} (External url: {})",
         SETTINGS.bind_host, SETTINGS.port, SETTINGS.external_url
@@ -87,7 +87,7 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
             path.join(file)
         };
         if path.is_file() {
-            let template = read_file(&path)?;
+            let template = log_err!(read_file(&path), error, true)?;
             let page = template.replace("((%u))", SETTINGS.external_url.as_ref());
             return Ok(HttpResponseBuilder::new(StatusCode::OK)
                 .insert_header(ContentType::html())
@@ -106,7 +106,10 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
     is_email_allowed(&email)?;
     let token = gen_random_token();
     store_pending_addition(pem.key.clone(), &email, &token)?;
-    debug!("Sending email to {} to add a key... (Request token: {})", email, token);
+    debug!(
+        "Sending email to {} to add a key... (Request token: {})",
+        email, token
+    );
     send_confirmation_email(&email, &Action::Add, &token)?;
     info!("User {} requested to add a key successfully!", email);
     Ok(return_outcome(Ok("You submitted your key successfully!"))?)
@@ -116,7 +119,11 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
 async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
     debug!("Handling token {}...", token.token);
     let (action, email) = confirm_action(&token.token)?;
-    info!("User {} confirmed to {} his key successfully!", email, action.to_string().to_lowercase());
+    info!(
+        "User {} confirmed to {} his key successfully!",
+        email,
+        action.to_string().to_lowercase()
+    );
     match action {
         Action::Add => Ok(return_outcome(Ok("Your key was added successfully!"))?),
         Action::Delete => Ok(return_outcome(Ok("Your key was deleted successfully!"))?),
@@ -125,13 +132,19 @@ async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
 
 #[get("/api/delete")]
 async fn delete(email: web::Query<Email>) -> Result<HttpResponse, CompatErr> {
-    debug!("Handling user {} request to add a key...", email.email);
+    debug!("Handling user {} request to delete a key...", email.email);
     key_exists(&email.email)?;
     let token = gen_random_token();
     store_pending_deletion(email.email.clone(), &token)?;
-    debug!("Sending email to {} to add a key... (Request token: {})", email.email, token);
+    debug!(
+        "Sending email to {} to delete a key... (Request token: {})",
+        email.email, token
+    );
     send_confirmation_email(&email.email, &Action::Delete, &token)?;
-    info!("User {} requested to delete his key successfully!", email.email);
+    info!(
+        "User {} requested to delete his key successfully!",
+        email.email
+    );
     Ok(return_outcome(Ok(
         "You requested the deletion of your key successfully!",
     ))?)

@@ -1,5 +1,5 @@
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
-use log::error;
+use log::{debug, error, warn};
 use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
 use sequoia_openpgp::policy::StandardPolicy;
@@ -47,15 +47,18 @@ pub enum SMTPEncryption {
 }
 
 fn get_settings() -> Settings {
+    debug!("Parsing settings...");
     let content = match read_file(&PathBuf::from("config.toml")) {
         Ok(content) => content,
         Err(_) => {
+            error!("Unable to access settings file!");
             panic!("Unable to access settings file!")
         }
     };
     let settings = match log_err!(toml::from_str(&content), error) {
         Ok(settings) => settings,
         Err(_) => {
+            error!("Unable to parse settings from file!");
             panic!("Unable to parse settings from file!")
         }
     };
@@ -63,6 +66,7 @@ fn get_settings() -> Settings {
 }
 
 fn get_mailer() -> SmtpTransport {
+    debug!("Setting up smtp...");
     let creds = Credentials::new(
         SETTINGS.mail_settings.smtp_username.to_owned(),
         SETTINGS.mail_settings.smtp_password.to_owned(),
@@ -76,13 +80,15 @@ fn get_mailer() -> SmtpTransport {
     let mailer = match builder {
         Ok(builder) => builder,
         Err(_) => {
+            error!("Unable to set up smtp");
             panic!("Unable to set up smtp")
         }
     }
     .credentials(creds)
     .port(SETTINGS.mail_settings.smtp_port)
     .build();
-    let _ = mailer.test_connection();
+    debug!("Testing smtp connection...");
+    let _ = log_err!(mailer.test_connection(), warn);
     mailer
 }
 
