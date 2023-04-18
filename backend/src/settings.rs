@@ -1,4 +1,5 @@
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
+use log::error;
 use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
 use sequoia_openpgp::policy::StandardPolicy;
@@ -6,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use url::Url;
 
-use crate::utils::read_file;
+use crate::{log_err, utils::read_file};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
@@ -52,7 +53,7 @@ fn get_settings() -> Settings {
             panic!("Unable to access settings file!")
         }
     };
-    let settings = match toml::from_str(&content) {
+    let settings = match log_err!(toml::from_str(&content), error) {
         Ok(settings) => settings,
         Err(_) => {
             panic!("Unable to parse settings from file!")

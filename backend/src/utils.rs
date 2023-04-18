@@ -1,5 +1,6 @@
 use crate::errors::CompatErr;
 use crate::errors::SpecialErrors;
+use crate::log_err;
 use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
 
@@ -9,9 +10,10 @@ use actix_web::{
     HttpResponse, HttpResponseBuilder,
 };
 use anyhow::Result;
-use flexi_logger::{
-    style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record,
-};
+use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, LoggerHandle, Record};
+use log::debug;
+use log::trace;
+use log::warn;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_net::wkd::Url;
 use sequoia_openpgp::{parse::Parse, Cert};
@@ -23,13 +25,12 @@ use std::{
 #[macro_export]
 macro_rules! validate_cert {
     ( $x:expr ) => {
-        match $x.with_policy($crate::settings::POLICY, None) {
+        match log_err!($x.with_policy($crate::settings::POLICY, None), debug) {
             Ok(validcert) => Ok(validcert),
             Err(_) => Err($crate::errors::SpecialErrors::InvalidCert),
         }
     };
 }
-
 
 pub fn pending_path() -> PathBuf {
     Path::new(&ROOT_FOLDER).join("pending")
@@ -41,25 +42,25 @@ pub fn webpage_path() -> PathBuf {
 
 pub fn read_file(path: &PathBuf) -> Result<String> {
     if path.is_file() {
-        Ok(fs::read_to_string(path)?)
+        Ok(log_err!(fs::read_to_string(path), warn)?)
     } else {
+        trace!("The requested file {} does not exist", path.display());
         Err(SpecialErrors::MissingFile)?
     }
 }
 
 pub fn is_email_allowed(email: &str) -> Result<()> {
-    let allowed = match email.split('@').last() {
-        Some(domain) => SETTINGS.allowed_domains.contains(&domain.to_string()),
-        None => Err(SpecialErrors::MalformedEmail)?,
-    };
+    let domain = extract_domain(email)?;
+    let allowed = SETTINGS.allowed_domains.contains(&domain);
     if !allowed {
+        debug!("User {} was rejected: domain not whitelisted", email);
         Err(SpecialErrors::UnallowedDomain)?;
     }
     Ok(())
 }
 
 pub fn parse_pem(pemfile: &str) -> Result<Cert> {
-    let cert = match sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()) {
+    let cert = match log_err!(sequoia_openpgp::Cert::from_bytes(pemfile.as_bytes()), debug) {
         Ok(cert) => cert,
         Err(_) => Err(SpecialErrors::MalformedCert)?,
     };
@@ -74,22 +75,34 @@ pub fn gen_random_token() -> String {
 
 pub fn get_email_from_cert(cert: &Cert) -> Result<String> {
     let validcert = validate_cert!(cert)?;
-    let userid_opt = validcert.primary_userid()?;
+    let userid_opt = log_err!(validcert.primary_userid(), debug)?;
     let email_opt = userid_opt.email()?;
     match email_opt {
         Some(email) => Ok(email),
-        None => Err(SpecialErrors::EmailMissing)?,
+        None => log_err!(Err(SpecialErrors::EmailMissing), debug)?,
     }
 }
 
+pub fn extract_domain(email: &str) -> Result<String> {
+    let domain = match email.split('@').last() {
+        Some(domain) => domain.to_string(),
+        None => {
+            debug!("Unable to extract domain from {}, email malformed", email);
+            Err(SpecialErrors::MalformedEmail)?
+        }
+    };
+    Ok(domain)
+}
+
 pub fn get_user_file_path(email: &str) -> Result<PathBuf> {
-    let wkd_url = Url::from(email)?;
+    let wkd_url = log_err!(Url::from(email), debug)?;
     wkd_url.to_file_path(SETTINGS.variant)
 }
 
 pub fn key_exists(email: &str) -> Result<bool> {
     let path = get_user_file_path(email)?;
     if !Path::new(&ROOT_FOLDER).join(path).is_file() {
+        debug!("No key found for user {}", email);
         Err(SpecialErrors::InexistingUser)?
     }
     Ok(true)

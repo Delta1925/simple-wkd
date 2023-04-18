@@ -1,8 +1,10 @@
-use crate::settings::ROOT_FOLDER;
-use crate::utils::{get_user_file_path, key_exists, read_file, pending_path};
+use crate::log_err;
+use crate::settings::{ERROR_TEXT, ROOT_FOLDER};
+use crate::utils::{get_user_file_path, key_exists, pending_path, read_file};
 
 use anyhow::Result;
 use chrono::Utc;
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs, path::Path};
 
@@ -53,8 +55,8 @@ impl Pending {
 }
 
 fn store_pending(pending: &Pending, token: &str) -> Result<()> {
-    let serialized = toml::to_string(pending)?;
-    fs::write(pending_path().join(token), serialized)?;
+    let serialized = log_err!(toml::to_string(pending), warn)?;
+    log_err!(fs::write(pending_path().join(token), serialized), warn)?;
     Ok(())
 }
 
@@ -82,19 +84,23 @@ pub fn clean_stale(max_age: i64) {
         };
         let key = match toml::from_str::<Pending>(&content) {
             Ok(key) => key,
-            Err(_) => {
+            Err(error) => {
+                warn!("{} {}", ERROR_TEXT, error);
                 continue;
             }
         };
         let now = Utc::now().timestamp();
         if now - key.timestamp() > max_age {
-            let _ = fs::remove_file(&file_path);
+            match fs::remove_file(&file_path) {
+                Ok(_) => debug!("Deleted {}, since it was stale", file_path.display()),
+                Err(error) => warn!("{} {}", ERROR_TEXT, error),
+            };
         }
     }
 }
 
 pub fn delete_key(email: &str) -> Result<()> {
     let path = Path::new(&ROOT_FOLDER).join(get_user_file_path(email)?);
-    fs::remove_file(path)?;
+    log_err!(fs::remove_file(path), warn)?;
     Ok(())
 }

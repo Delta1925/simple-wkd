@@ -10,7 +10,11 @@ macro_rules! log_err {
     ($var: expr, $level: ident) => {{
         let test = $var;
         if test.is_err() {
-            $level!("{} {}", $crate::settings::ERROR_TEXT, test.as_ref().unwrap_err());
+            $level!(
+                "{} {}",
+                $crate::settings::ERROR_TEXT,
+                test.as_ref().unwrap_err()
+            );
             test
         } else {
             test

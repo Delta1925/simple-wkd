@@ -1,11 +1,12 @@
 use chrono::Utc;
 use lettre::message::header::ContentType;
+use log::{warn, debug};
 
 use crate::errors::SpecialErrors;
 use crate::management::{delete_key, Action, Pending};
-use crate::pending_path;
 use crate::settings::{MAILER, ROOT_FOLDER, SETTINGS};
-use crate::utils::{get_email_from_cert, parse_pem, read_file};
+use crate::utils::{extract_domain, get_email_from_cert, parse_pem, read_file};
+use crate::{log_err, pending_path};
 use anyhow::Result;
 
 use lettre::{Message, Transport};
@@ -15,20 +16,20 @@ use std::path::Path;
 pub fn confirm_action(token: &str) -> Result<(Action, String)> {
     let pending_path = pending_path().join(token);
     let content = read_file(&pending_path)?;
-    let key = toml::from_str::<Pending>(&content)?;
+    let key = log_err!(toml::from_str::<Pending>(&content), warn)?;
     if Utc::now().timestamp() - key.timestamp() > SETTINGS.max_age {
-        fs::remove_file(&pending_path)?;
+        log_err!(fs::remove_file(&pending_path), warn)?;
         Err(SpecialErrors::ExpiredRequest)?
     } else {
         let address = match key.action() {
             Action::Add => {
                 let cert = parse_pem(key.data())?;
                 let email = get_email_from_cert(&cert)?;
-                let domain = match email.split('@').last() {
-                    Some(domain) => domain.to_string(),
-                    None => Err(SpecialErrors::MalformedEmail)?,
-                };
-                sequoia_net::wkd::insert(ROOT_FOLDER, domain, SETTINGS.variant, &cert)?;
+                let domain = extract_domain(&email)?;
+                log_err!(
+                    sequoia_net::wkd::insert(ROOT_FOLDER, domain, SETTINGS.variant, &cert),
+                    warn
+                )?;
                 email
             }
             Action::Delete => {
@@ -57,7 +58,7 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
                 panic!("Unable to parse the email in the settings!")
             }
         })
-        .to(match address.parse() {
+        .to(match log_err!(address.parse(), debug) {
             Ok(mbox) => mbox,
             Err(_) => Err(SpecialErrors::MalformedEmail)?,
         })
@@ -72,8 +73,10 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
             template
                 .replace("{{%u}}", url.as_ref())
                 .replace("{{%a}}", &action.to_string().to_lowercase()),
-        )?;
+        );
 
-    MAILER.send(&email)?;
+    let email = log_err!(email, warn)?;
+
+    log_err!(MAILER.send(&email), warn)?;
     Ok(())
 }

@@ -6,6 +6,7 @@ mod utils;
 
 use crate::confirmation::{confirm_action, send_confirmation_email};
 use crate::errors::CompatErr;
+use crate::errors::SpecialErrors;
 use crate::management::{clean_stale, store_pending_addition, store_pending_deletion, Action};
 use crate::settings::{ROOT_FOLDER, SETTINGS};
 use crate::utils::{
@@ -18,9 +19,8 @@ use actix_web::http::StatusCode;
 use actix_web::{
     get, post, web, App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer, Result,
 };
-use errors::SpecialErrors;
+use log::{debug, error, info, trace};
 use serde::Deserialize;
-use std::env;
 use std::fs;
 use std::path::Path;
 use tokio::{task, time};
@@ -43,21 +43,21 @@ struct Email {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    if let Ok(value) = env::var("RUST_LOG") {
-        env::set_var("RUST_LOG", format!("simple_wkd={}", value));
-    }
     if init_logger().is_err() {
         panic!("Could not set up logger!")
     };
-    fs::create_dir_all(pending_path())?;
+    log_err!(fs::create_dir_all(pending_path()), error)?;
     task::spawn(async {
         let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
             metronome.tick().await;
+            debug!("Cleaning up stale data...");
             clean_stale(SETTINGS.max_age);
+            debug!("Cleanup completed!")
         }
     });
-    HttpServer::new(|| {
+    debug!("Starting server...");
+    let server = HttpServer::new(|| {
         App::new()
             .service(submit)
             .service(confirm)
@@ -69,8 +69,13 @@ async fn main() -> std::io::Result<()> {
             .route("/{filename:.*}", web::get().to(index))
     })
     .bind((SETTINGS.bind_host.to_string(), SETTINGS.port))?
-    .run()
-    .await
+    .run();
+    debug!("Server started successfully!");
+    info!(
+        "Listening on: {}:{} (External url: {})",
+        SETTINGS.bind_host, SETTINGS.port, SETTINGS.external_url
+    );
+    server.await
 }
 
 async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
@@ -89,6 +94,7 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
                 .body(page));
         }
     }
+    trace!("The requested file {} could not be found", path.display());
     Err(SpecialErrors::MissingFile)?
 }
 
@@ -99,13 +105,16 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
     is_email_allowed(&email)?;
     let token = gen_random_token();
     store_pending_addition(pem.key.clone(), &email, &token)?;
+    debug!("Sending email to {} to add a key... (Request token: {})", email, token);
     send_confirmation_email(&email, &Action::Add, &token)?;
+    info!("User {} requested to add a key successfully!", email);
     Ok(return_outcome(Ok("You submitted your key successfully!"))?)
 }
 
 #[get("/api/confirm")]
 async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
-    let (action, _email) = confirm_action(&token.token)?;
+    let (action, email) = confirm_action(&token.token)?;
+    info!("User {} confirmed to {} his key successfully!", email, action.to_string().to_lowercase());
     match action {
         Action::Add => Ok(return_outcome(Ok("Your key was added successfully!"))?),
         Action::Delete => Ok(return_outcome(Ok("Your key was deleted successfully!"))?),
@@ -116,7 +125,9 @@ async fn confirm(token: web::Query<Token>) -> Result<HttpResponse, CompatErr> {
 async fn delete(email: web::Query<Email>) -> Result<HttpResponse, CompatErr> {
     let token = gen_random_token();
     store_pending_deletion(email.email.clone(), &token)?;
+    debug!("Sending email to {} to add a key... (Request token: {})", email.email, token);
     send_confirmation_email(&email.email, &Action::Delete, &token)?;
+    info!("User {} requested to delete his key successfully!", email.email);
     Ok(return_outcome(Ok(
         "You requested the deletion of your key successfully!",
     ))?)
