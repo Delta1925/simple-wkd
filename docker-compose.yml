@@ -1,7 +1,7 @@
 version: '3'
 services:
   keyserver:
-    image: "simple-wkd"
+    image: "delta1925/simple-wkd"
     restart: always
     ports:
       - 8080:8080
