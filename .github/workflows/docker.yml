@@ -20,7 +20,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/i386
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
           push: true
-          tags: delta1925/simple-wkd:${{ github.event.release.tag_name }},delta1925/simple-wkd:latest
+          tags: delta1925/simple-wkd:latest,delta1925/simple-wkd:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
