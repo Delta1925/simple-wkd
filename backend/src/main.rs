@@ -110,7 +110,7 @@ async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
         "Sending email to {} to add a key... (Request token: {})",
         email, token
     );
-    send_confirmation_email(&email, &Action::Add, &token)?;
+    send_confirmation_email(&email, &Action::Add, &token).await?;
     info!("User {} requested to add a key successfully!", email);
     Ok(return_outcome(Ok("You submitted your key successfully!"))?)
 }
@@ -140,7 +140,7 @@ async fn delete(email: web::Query<Email>) -> Result<HttpResponse, CompatErr> {
         "Sending email to {} to delete a key... (Request token: {})",
         email.email, token
     );
-    send_confirmation_email(&email.email, &Action::Delete, &token)?;
+    send_confirmation_email(&email.email, &Action::Delete, &token).await?;
     info!(
         "User {} requested to delete his key successfully!",
         email.email

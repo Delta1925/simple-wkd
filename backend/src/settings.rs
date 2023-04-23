@@ -1,5 +1,5 @@
-use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
-use log::{debug, error, warn};
+use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
+use log::{debug, error};
 use once_cell::sync::Lazy;
 use sequoia_net::wkd::Variant;
 use sequoia_openpgp::policy::StandardPolicy;
@@ -65,16 +65,18 @@ fn get_settings() -> Settings {
     settings
 }
 
-fn get_mailer() -> SmtpTransport {
+fn get_mailer() -> AsyncSmtpTransport<Tokio1Executor> {
     debug!("Setting up smtp...");
     let creds = Credentials::new(
         SETTINGS.mail_settings.smtp_username.to_owned(),
         SETTINGS.mail_settings.smtp_password.to_owned(),
     );
     let builder = match &SETTINGS.mail_settings.smtp_tls {
-        SMTPEncryption::Tls => SmtpTransport::relay(&SETTINGS.mail_settings.smtp_host),
+        SMTPEncryption::Tls => {
+            AsyncSmtpTransport::<Tokio1Executor>::relay(&SETTINGS.mail_settings.smtp_host)
+        }
         SMTPEncryption::Starttls => {
-            SmtpTransport::starttls_relay(&SETTINGS.mail_settings.smtp_host)
+            AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&SETTINGS.mail_settings.smtp_host)
         }
     };
     let mailer = match builder {
@@ -87,8 +89,6 @@ fn get_mailer() -> SmtpTransport {
     .credentials(creds)
     .port(SETTINGS.mail_settings.smtp_port)
     .build();
-    debug!("Testing smtp connection...");
-    let _ = log_err!(mailer.test_connection(), warn);
     mailer
 }
 
@@ -96,4 +96,4 @@ pub const ERROR_TEXT: &str = "An error occoured:";
 pub const POLICY: &StandardPolicy = &StandardPolicy::new();
 pub const ROOT_FOLDER: &str = "data";
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);
-pub static MAILER: Lazy<SmtpTransport> = Lazy::new(get_mailer);
+pub static MAILER: Lazy<AsyncSmtpTransport<Tokio1Executor>> = Lazy::new(get_mailer);

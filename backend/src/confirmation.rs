@@ -9,7 +9,7 @@ use crate::utils::{extract_domain, get_email_from_cert, parse_pem, read_file};
 use crate::{log_err, pending_path};
 use anyhow::Result;
 
-use lettre::{Message, Transport};
+use lettre::{AsyncTransport, Message};
 use std::fs;
 use std::path::Path;
 
@@ -43,7 +43,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String)> {
     }
 }
 
-pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> Result<()> {
+pub async fn send_confirmation_email(address: &str, action: &Action, token: &str) -> Result<()> {
     let template = log_err!(
         read_file(&Path::new("assets").join("mail-template.html")),
         error,
@@ -82,7 +82,7 @@ pub fn send_confirmation_email(address: &str, action: &Action, token: &str) -> R
 
     let email = log_err!(email, warn)?;
 
-    match log_err!(MAILER.send(&email), warn) {
+    match log_err!(MAILER.send(email).await, warn) {
         Ok(_) => Ok(()),
         Err(_) => Err(SpecialErrors::MailErr)?,
     }
