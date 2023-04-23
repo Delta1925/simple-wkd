@@ -41,7 +41,7 @@ mail_settings.mail_subject | String | The confirmation email's subject
 
 ## Environment Variables
 
-You can choose the logging level by setting the `RUST_LOG` environment variable, using the [env_logger](https://docs.rs/env_logger/0.10.0/env_logger/#enabling-logging) syntax. To filter out logs originating from simple-wkd's dependencies, you should set it to `RUST_LOG=simple_wkd={log_level}`
+You can choose the logging level by setting the `RUST_LOG` environment variable, using the [env_logger](https://docs.rs/env_logger/0.10.0/env_logger/#enabling-logging) syntax. To filter out logs originating from simple-wkd's dependencies, you should set `RUST_LOG` to `simple_wkd={log_level}`
 
 ## Deployment
 
