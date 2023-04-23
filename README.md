@@ -43,6 +43,30 @@ mail_settings.mail_subject | String | The confirmation email's subject
 
 You can choose the logging level by setting the `RUST_LOG` environment variable, using the [env_logger](https://docs.rs/env_logger/0.10.0/env_logger/#enabling-logging) syntax. To filter out logs originating from simple-wkd's dependencies, you should set `RUST_LOG` to `simple_wkd={log_level}`
 
+
+## Development
+
+To develop the webpage you just need to `cd` to the website directory and run the dev server. This allows to see changes to the code in real-time, but doesn't start the backend.
+```bash
+$ cd website
+$ pnpm install && pnpm dev
+```
+
+To develop the backend you need to copy the necessary files (aka. config and assets, including the webpage) to the backend directory, and run the server.
+```bash
+# Build the webpage
+$ cd website
+$ pnpm install && pnpm build
+$ cd ..
+# Copy necessary files to the backend folder
+$ cp -r website/dist assets/webpage && cp -r assets backend/assets 
+$ cp example.config.toml backend/example.toml 
+# Run the server
+$ cd backend
+$ cargo run
+```
+
+
 ## Deployment
 
 1. Download the default `docker-compose.yml` and `config.toml`
