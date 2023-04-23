@@ -7,6 +7,10 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          [linux/amd64, linux/arm64, linux/arm/v7, linux/arm/v6, linux/386]
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -20,7 +24,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
+          platforms: ${{ matrix.platform }}
           push: true
           tags: delta1925/simple-wkd:latest,delta1925/simple-wkd:${{ github.ref_name }}
           cache-from: type=gha
