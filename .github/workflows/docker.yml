@@ -5,27 +5,62 @@ on:
     types: [published]
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform:
-          [linux/amd64, linux/arm64, linux/arm/v7, linux/arm/v6, linux/386]
+        include:
+          - platform: linux/amd64
+            arch: x86_64
+          - platform: linux/arm64
+            arch: aarch64
+          - platform: linux/arm/v7
+            arch: armv7
+          - platform: linux/arm/v6
+            arch: arm
+          - platform: linux/386
+            arch: i686
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
+      - name: Build images
         uses: docker/build-push-action@v4
         with:
           platforms: ${{ matrix.platform }}
-          push: true
-          tags: delta1925/simple-wkd:latest,delta1925/simple-wkd:${{ github.ref_name }}
+          tags: delta1925/simple-wkd:${{ matrix.arch }}
+          outputs: type=docker,dest=/tmp/simple-wkd-${{ matrix.arch }}.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: simple-wkd-${{ matrix.arch }}
+          path: /tmp/simple-wkd-${{ matrix.arch }}.tar
+
+  push:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - tag: latest
+          - tag: ${{ github.ref_name }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: /tmp/simple-wkd
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        run: docker login -p ${{ secrets.DOCKERHUB_TOKEN }} -u ${{ secrets.DOCKERHUB_USERNAME }}
+      - name: Load images
+        run: find /tmp/simple-wkd -iname "simple-wkd-*.tar" -exec docker load --input {} \
+      - name: Create manifest
+        run: docker manifest create delta1925/simple-wkd:${{ matrix.tag }} simple-wkd:x86_64 simple-wkd:aarch64 simple-wkd:armv7 simple-wkd:arm simple-wkd:i686
+      - name: Push images
+        run: docker matifest push delta1925/simple-wkd:${{ matrix.tag }}
+      - name: Logout from Docker hub
+        run: docker logout

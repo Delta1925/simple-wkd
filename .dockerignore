@@ -1,6 +1,7 @@
 *config.toml
 Dockerfile
 README.md
+.github/workflows/*
 backend/data/*
 backend/logs/*
 backend/target/*
