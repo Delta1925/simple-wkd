@@ -138,7 +138,7 @@ pub fn extract_domain(email: &str) -> Result<String> {
 
 pub fn key_exists(email: &str) -> Result<bool> {
     let path = email_to_file_path(email)?;
-    if !Path::new(&ROOT_FOLDER).join(path).is_file() {
+    if !path.is_file() {
         debug!("No key found for user {}", email);
         Err(SpecialErrors::InexistingUser)?
     }
