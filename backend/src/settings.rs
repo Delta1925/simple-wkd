@@ -1,7 +1,6 @@
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use log::{debug, error};
 use once_cell::sync::Lazy;
-use sequoia_net::wkd::Variant;
 use sequoia_openpgp::policy::StandardPolicy;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -11,7 +10,6 @@ use crate::{log_err, utils::read_file};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
-    #[serde(with = "VariantDef")]
     pub variant: Variant,
     pub max_age: i64,
     pub cleanup_interval: u64,
@@ -34,8 +32,7 @@ pub struct MailSettings {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(remote = "Variant")]
-pub enum VariantDef {
+pub enum Variant {
     Advanced,
     Direct,
 }
@@ -55,14 +52,13 @@ fn get_settings() -> Settings {
             panic!("Unable to access settings file!")
         }
     };
-    let settings = match log_err!(toml::from_str(&content), error) {
+    match log_err!(toml::from_str(&content), error) {
         Ok(settings) => settings,
         Err(_) => {
             error!("Unable to parse settings from file!");
             panic!("Unable to parse settings from file!")
         }
-    };
-    settings
+    }
 }
 
 fn get_mailer() -> AsyncSmtpTransport<Tokio1Executor> {
@@ -79,7 +75,7 @@ fn get_mailer() -> AsyncSmtpTransport<Tokio1Executor> {
             AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&SETTINGS.mail_settings.smtp_host)
         }
     };
-    let mailer = match builder {
+    match builder {
         Ok(builder) => builder,
         Err(_) => {
             error!("Unable to set up smtp");
@@ -88,8 +84,7 @@ fn get_mailer() -> AsyncSmtpTransport<Tokio1Executor> {
     }
     .credentials(creds)
     .port(SETTINGS.mail_settings.smtp_port)
-    .build();
-    mailer
+    .build()
 }
 
 pub const ERROR_TEXT: &str = "An error occoured:";

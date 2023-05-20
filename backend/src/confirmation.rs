@@ -4,8 +4,8 @@ use log::{debug, error, warn};
 
 use crate::errors::SpecialErrors;
 use crate::management::{delete_key, Action, Pending};
-use crate::settings::{MAILER, ROOT_FOLDER, SETTINGS};
-use crate::utils::{extract_domain, get_email_from_cert, parse_pem, read_file};
+use crate::settings::{MAILER, SETTINGS};
+use crate::utils::{get_email_from_cert, insert_key, parse_pem, read_file};
 use crate::{log_err, pending_path};
 use anyhow::Result;
 
@@ -26,11 +26,7 @@ pub fn confirm_action(token: &str) -> Result<(Action, String)> {
             Action::Add => {
                 let cert = parse_pem(key.data())?;
                 let email = get_email_from_cert(&cert)?;
-                let domain = extract_domain(&email)?;
-                log_err!(
-                    sequoia_net::wkd::insert(ROOT_FOLDER, domain, SETTINGS.variant, &cert),
-                    warn
-                )?;
+                log_err!(insert_key(&cert), warn)?;
                 email
             }
             Action::Delete => {

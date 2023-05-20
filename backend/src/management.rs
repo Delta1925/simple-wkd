@@ -1,12 +1,12 @@
 use crate::log_err;
-use crate::settings::{ERROR_TEXT, ROOT_FOLDER};
-use crate::utils::{get_user_file_path, pending_path, read_file};
+use crate::settings::ERROR_TEXT;
+use crate::utils::{email_to_file_path, pending_path, read_file};
 
 use anyhow::Result;
 use chrono::Utc;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, fs, path::Path};
+use std::{fmt::Display, fs};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Action {
@@ -100,7 +100,7 @@ pub fn clean_stale(max_age: i64) {
 }
 
 pub fn delete_key(email: &str) -> Result<()> {
-    let path = Path::new(&ROOT_FOLDER).join(get_user_file_path(email)?);
+    let path = email_to_file_path(email)?;
     log_err!(fs::remove_file(path), warn)?;
     Ok(())
 }

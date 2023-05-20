@@ -1,6 +1,7 @@
 use crate::errors::CompatErr;
 use crate::errors::SpecialErrors;
 use crate::log_err;
+use crate::settings::Variant;
 use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
 
@@ -14,7 +15,8 @@ use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, Logge
 use log::debug;
 use log::error;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use sequoia_net::wkd::Url;
+use sequoia_openpgp::serialize::Marshal;
+use sequoia_openpgp::types::HashAlgorithm;
 use sequoia_openpgp::{parse::Parse, Cert};
 use std::{
     fs,
@@ -29,6 +31,48 @@ macro_rules! validate_cert {
             Err(_) => Err($crate::errors::SpecialErrors::InvalidCert),
         }
     };
+}
+
+pub fn encode_local(local: &str) -> String {
+    let mut digest = vec![0; 20];
+    let mut algo = HashAlgorithm::SHA1.context().unwrap();
+    algo.update(local.as_bytes());
+    let _ = algo.digest(&mut digest);
+
+    zbase32::encode_full_bytes(&digest[..])
+}
+
+pub fn email_to_file_path(email: &str) -> Result<PathBuf> {
+    let address_data: Vec<&str> = email.split('@').collect();
+    if address_data.len() != 2 {
+        Err(SpecialErrors::MalformedEmail)?;
+    }
+
+    let domain = address_data[1];
+    let local_encoded = encode_local(address_data[0]);
+
+    let directory = match SETTINGS.variant {
+        Variant::Advanced => format!(".well-known/openpgpkey/{}/hu/{}", domain, local_encoded),
+        Variant::Direct => format!(".well-known/openpgpkey/hu/{}", local_encoded),
+    };
+
+    Ok(PathBuf::from(ROOT_FOLDER).join(directory))
+}
+
+pub fn insert_key(cert: &Cert) -> Result<()> {
+    let validcert = validate_cert!(cert)?;
+    let path = email_to_file_path(&get_email_from_cert(cert)?)?;
+
+    fs::create_dir_all(path.parent().unwrap())?;
+    let mut file = fs::File::create(&path)?;
+    validcert.export(&mut file)?;
+
+    fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(path.parent().unwrap().parent().unwrap().join("policy"))?;
+
+    Ok(())
 }
 
 pub fn pending_path() -> PathBuf {
@@ -92,13 +136,8 @@ pub fn extract_domain(email: &str) -> Result<String> {
     Ok(domain)
 }
 
-pub fn get_user_file_path(email: &str) -> Result<PathBuf> {
-    let wkd_url = log_err!(Url::from(email), debug)?;
-    wkd_url.to_file_path(SETTINGS.variant)
-}
-
 pub fn key_exists(email: &str) -> Result<bool> {
-    let path = get_user_file_path(email)?;
+    let path = email_to_file_path(email)?;
     if !Path::new(&ROOT_FOLDER).join(path).is_file() {
         debug!("No key found for user {}", email);
         Err(SpecialErrors::InexistingUser)?
