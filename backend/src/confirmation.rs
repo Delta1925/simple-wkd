@@ -6,7 +6,7 @@ use crate::errors::SpecialErrors;
 use crate::management::{delete_key, Action, Pending};
 use crate::settings::{MAILER, SETTINGS};
 use crate::utils::{get_email_from_cert, insert_key, parse_pem, read_file};
-use crate::{log_err, pending_path};
+use crate::{log_err, pending_path, validate_cert};
 use anyhow::Result;
 
 use lettre::{AsyncTransport, Message};
@@ -25,8 +25,9 @@ pub fn confirm_action(token: &str) -> Result<(Action, String)> {
         let address = match key.action() {
             Action::Add => {
                 let cert = parse_pem(key.data())?;
-                let email = get_email_from_cert(&cert)?;
-                log_err!(insert_key(&cert), warn)?;
+                let validcert = validate_cert!(cert)?;
+                let email = get_email_from_cert(&validcert)?;
+                log_err!(insert_key(&validcert), warn)?;
                 email
             }
             Action::Delete => {

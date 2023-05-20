@@ -36,6 +36,8 @@ macro_rules! log_err {
 
 #[derive(Debug, DeriveError)]
 pub enum SpecialErrors {
+    #[error("Uploaded certificate contains a secret key!")]
+    ContainsSecret,
     #[error("Could not find any primay user email in the keyblock!")]
     EmailMissing,
     #[error("The request had expired!")]
@@ -92,6 +94,7 @@ impl ResponseError for CompatErr {
         match self {
             Self::AnyhowErr(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::SpecialErr(error) => match error {
+                SpecialErrors::ContainsSecret => StatusCode::BAD_REQUEST,
                 SpecialErrors::ExpiredRequest => StatusCode::BAD_REQUEST,
                 SpecialErrors::InexistingUser => StatusCode::NOT_FOUND,
                 SpecialErrors::InvalidCert => StatusCode::BAD_REQUEST,

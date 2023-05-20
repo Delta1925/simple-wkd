@@ -15,6 +15,7 @@ use flexi_logger::{style, DeferredNow, FileSpec, FlexiLoggerError, Logger, Logge
 use log::debug;
 use log::error;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use sequoia_openpgp::cert::ValidCert;
 use sequoia_openpgp::serialize::Marshal;
 use sequoia_openpgp::types::HashAlgorithm;
 use sequoia_openpgp::{parse::Parse, Cert};
@@ -59,13 +60,12 @@ pub fn email_to_file_path(email: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(ROOT_FOLDER).join(directory))
 }
 
-pub fn insert_key(cert: &Cert) -> Result<()> {
-    let validcert = validate_cert!(cert)?;
+pub fn insert_key(cert: &ValidCert) -> Result<()> {
     let path = email_to_file_path(&get_email_from_cert(cert)?)?;
 
     fs::create_dir_all(path.parent().unwrap())?;
     let mut file = fs::File::create(&path)?;
-    validcert.export(&mut file)?;
+    cert.export(&mut file)?;
 
     fs::OpenOptions::new()
         .write(true)
@@ -115,9 +115,8 @@ pub fn gen_random_token() -> String {
     (0..10).map(|_| rng.sample(Alphanumeric) as char).collect()
 }
 
-pub fn get_email_from_cert(cert: &Cert) -> Result<String> {
-    let validcert = validate_cert!(cert)?;
-    let userid_opt = log_err!(validcert.primary_userid(), debug)?;
+pub fn get_email_from_cert(cert: &ValidCert) -> Result<String> {
+    let userid_opt = log_err!(cert.primary_userid(), debug)?;
     let email_opt = userid_opt.email()?;
     match email_opt {
         Some(email) => Ok(email),

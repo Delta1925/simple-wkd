@@ -101,7 +101,11 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
 #[post("/api/submit")]
 async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
     let cert = parse_pem(&pem.key)?;
-    let email = get_email_from_cert(&cert)?;
+    let validcert = validate_cert!(cert)?;
+    if validcert.is_tsk() {
+        Err(SpecialErrors::ContainsSecret)?
+    }
+    let email = get_email_from_cert(&validcert)?;
     debug!("Handling user {} request to add a key...", email);
     is_email_allowed(&email)?;
     let token = gen_random_token();
