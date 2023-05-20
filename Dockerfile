@@ -33,7 +33,8 @@ FROM ${base}
 
 # The final image uses user `wkd` for added security
 WORKDIR /wkd
-RUN adduser --no-create-home --disabled-password wkd && \
+RUN apk add --no-cache libgcc && \
+    adduser --no-create-home --disabled-password wkd && \
     chown -R wkd:wkd /wkd
 USER wkd
 COPY --from=webpage-builder assets assets
