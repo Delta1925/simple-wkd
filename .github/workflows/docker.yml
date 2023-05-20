@@ -21,7 +21,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
-          tags: simple-wkd:latest,simple-wkd:${{ github.ref_name }}
+          tags: ${{ github.repository_owner }}/simple-wkd:latest,${{ github.repository_owner }}/simple-wkd:${{ github.ref_name }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
