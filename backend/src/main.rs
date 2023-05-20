@@ -23,7 +23,7 @@ use actix_web::{
 use log::{debug, error, info, trace};
 use serde::Deserialize;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::{task, time};
 use utils::{init_logger, pending_path, webpage_path};
 
@@ -48,6 +48,7 @@ async fn main() -> std::io::Result<()> {
         panic!("Could not set up logger!")
     };
     log_err!(fs::create_dir_all(pending_path()), error)?;
+    log_err!(fs::create_dir_all(PathBuf::from(ROOT_FOLDER).join(".well-known")), error)?;
     task::spawn(async {
         let mut metronome = time::interval(time::Duration::from_secs(SETTINGS.cleanup_interval));
         loop {
