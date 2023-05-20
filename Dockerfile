@@ -31,13 +31,12 @@ RUN mv dist assets/webpage
 
 FROM ${base}
 
-# The final image uses user `wkd` for added security
 WORKDIR /wkd
+COPY entrypoint.sh entrypoint.sh
+COPY --from=webpage-builder assets assets
+COPY --from=bin-builder simple-wkd-executable wkd
 RUN apk add --no-cache libgcc && \
     adduser --no-create-home --disabled-password wkd && \
     chown -R wkd:wkd /wkd
-USER wkd
-COPY --from=webpage-builder assets assets
-COPY --from=bin-builder simple-wkd-executable wkd
 
-ENTRYPOINT [ "/wkd/wkd" ]
+ENTRYPOINT [ "sh", "/wkd/entrypoint.sh" ]
