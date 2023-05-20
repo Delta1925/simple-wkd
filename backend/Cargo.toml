@@ -9,11 +9,11 @@ actix-web = { version = "4.3.1", default-features = false, features = ["macros"]
 anyhow = "1.0.70"
 chrono = "0.4.24"
 flexi_logger = "0.25.3"
-lettre = { version = "0.10.4", features = ["tokio1-native-tls"] }
+lettre = { version = "0.10.4", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
 log = "0.4.17"
 once_cell = "1.17.1"
 rand = "0.8.5"
-sequoia-openpgp = { version = "1.14.0", default-features = false, features = ["crypto-openssl"] }
+sequoia-openpgp = { version = "1.14.0", default-features = false, features = ["crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"] }
 serde = { version = "1.0.160", features = ["derive"] }
 thiserror = "1.0.40"
 tokio = { version = "1.27.0", features = ["time"] }
