@@ -4,7 +4,7 @@ services:
     image: "delta1925/simple-wkd"
     restart: always
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
     environment:
       - RUST_LOG=debug
     volumes:
