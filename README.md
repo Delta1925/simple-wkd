@@ -60,7 +60,7 @@ $ pnpm install && pnpm build
 $ cd ..
 # Copy necessary files to the backend folder
 $ cp -r website/dist assets/webpage && cp -r assets backend/assets 
-$ cp example.config.toml backend/example.toml 
+$ cp example.config.toml backend/config.toml 
 # Run the server
 $ cd backend
 $ cargo run
