@@ -37,6 +37,7 @@ mail_settings.smtp_port | Any positive number | The port of the SMTP server
 mail_settings.smtp_tls | `Tls` or `Starttls` | The encryption method to use
 mail_settings.mail_from | String | The email address to be used
 mail_settings.mail_subject | String | The confirmation email's subject
+policy.key_max_validity | Any positive number | The maximum allowed validity period of a key in seconds. (optional)
 
 
 ## Environment Variables

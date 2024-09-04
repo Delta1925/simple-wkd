@@ -20,3 +20,4 @@ tokio = { version = "1.27.0", features = ["time"] }
 toml = "0.7.3"
 url = { version = "2.3.1", features = ["serde"] }
 zbase32 = "0.1.2"
+sequoia-policy-config = { version = "0.6" }

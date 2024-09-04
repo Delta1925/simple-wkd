@@ -4,6 +4,7 @@ use crate::log_err;
 use crate::settings::Variant;
 use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
+use crate::settings::POLICY;
 
 use actix_web::ResponseError;
 use actix_web::{
@@ -16,22 +17,56 @@ use log::debug;
 use log::error;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_openpgp::cert::ValidCert;
+use sequoia_openpgp::cert::amalgamation::ValidateAmalgamation;
 use sequoia_openpgp::serialize::Marshal;
 use sequoia_openpgp::types::HashAlgorithm;
 use sequoia_openpgp::{parse::Parse, Cert};
 use std::{
     fs,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
-#[macro_export]
-macro_rules! validate_cert {
-    ( $x:expr ) => {
-        match log_err!($x.with_policy($crate::settings::POLICY, None), debug) {
-            Ok(validcert) => Ok(validcert),
-            Err(_) => Err($crate::errors::SpecialErrors::InvalidCert),
-        }
+pub fn validate_cert(cert: &Cert) -> Result<ValidCert> {
+    let validcert = match log_err!(cert.with_policy(&*POLICY, None), debug) {
+        Ok(validcert) => validcert,
+        Err(e) => {
+            debug!("Certificate was rejected: The primary key violates the policy: {}", e.source().unwrap());
+            Err(SpecialErrors::InvalidCert)?
+       }
     };
+
+    for key in cert.keys().subkeys() {
+        match log_err!(key.with_policy(&*POLICY, None), debug) {
+            Ok(_) => continue,
+            Err(e) => {
+                debug!("Certificate was rejected: A sub key violates the policy: {}", e.source().unwrap());
+                Err(SpecialErrors::KeyPolicyViolation)?
+            }
+        }
+    }
+
+    if let Some(policy_settings) = &SETTINGS.policy {
+        if let Some(max_validity_setting) = policy_settings.key_max_validity {
+            let max_validity = Duration::from_secs(max_validity_setting);
+
+            if !max_validity.is_zero() {
+                for key in validcert.keys() {
+                    let validity = key.key_validity_period();
+
+                    if validity.is_none() {
+                        debug!("Certificate was rejected: The primary key or a subkey has validity period of zero");
+                        return Err(SpecialErrors::KeyNonExpiring)?
+                    } else if validity > Some(max_validity) {
+                        debug!("Certificate was rejected: The primary key or a subkey has a validity period greater than {max_validity_setting} seconds");
+                        return Err(SpecialErrors::KeyValidityTooLong)?
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(validcert)
 }
 
 pub fn encode_local(local: &str) -> String {
@@ -106,7 +141,7 @@ pub fn parse_pem(pemfile: &str) -> Result<Cert> {
         Ok(cert) => cert,
         Err(_) => Err(SpecialErrors::MalformedCert)?,
     };
-    validate_cert!(cert)?;
+    validate_cert(&cert)?;
     Ok(cert)
 }
 
