@@ -2,6 +2,7 @@ use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, T
 use log::{debug, error};
 use once_cell::sync::Lazy;
 use sequoia_openpgp::policy::StandardPolicy;
+use sequoia_policy_config::ConfiguredStandardPolicy;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use url::Url;
@@ -93,8 +94,19 @@ fn get_mailer() -> AsyncSmtpTransport<Tokio1Executor> {
     .build()
 }
 
+fn get_policy<'a>() -> StandardPolicy<'a>  {
+        let mut p = ConfiguredStandardPolicy::new();
+
+        match p.parse_default_config() {
+                Ok(_) => {},
+                Err(e) => error!("{e}"),
+        }
+
+        p.build()
+}
+
 pub const ERROR_TEXT: &str = "An error occoured:";
-pub const POLICY: &StandardPolicy = &StandardPolicy::new();
+pub static POLICY: Lazy<StandardPolicy> = Lazy::new(get_policy);
 pub const ROOT_FOLDER: &str = "data";
 pub static SETTINGS: Lazy<Settings> = Lazy::new(get_settings);
 pub static MAILER: Lazy<AsyncSmtpTransport<Tokio1Executor>> = Lazy::new(get_mailer);

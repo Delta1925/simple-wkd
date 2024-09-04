@@ -4,6 +4,7 @@ use crate::log_err;
 use crate::settings::Variant;
 use crate::settings::ROOT_FOLDER;
 use crate::settings::SETTINGS;
+use crate::settings::POLICY;
 
 use actix_web::ResponseError;
 use actix_web::{
@@ -26,7 +27,7 @@ use std::{
 };
 
 pub fn validate_cert(cert: &Cert) -> Result<ValidCert> {
-    let validcert = match log_err!(cert.with_policy(crate::settings::POLICY, None), debug) {
+    let validcert = match log_err!(cert.with_policy(&*POLICY, None), debug) {
         Ok(validcert) => validcert,
         Err(_) => Err(SpecialErrors::InvalidCert)?,
     };
