@@ -22,13 +22,36 @@ use sequoia_openpgp::{parse::Parse, Cert};
 use std::{
     fs,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 pub fn validate_cert(cert: &Cert) -> Result<ValidCert> {
-    match log_err!(cert.with_policy(crate::settings::POLICY, None), debug) {
-        Ok(validcert) => Ok(validcert),
+    let validcert = match log_err!(cert.with_policy(crate::settings::POLICY, None), debug) {
+        Ok(validcert) => validcert,
         Err(_) => Err(SpecialErrors::InvalidCert)?,
+    };
+
+    if let Some(policy_settings) = &SETTINGS.policy {
+        if let Some(max_validity_setting) = policy_settings.key_max_validity {
+            let max_validity = Duration::from_secs(max_validity_setting);
+
+            if !max_validity.is_zero() {
+                for key in validcert.keys() {
+                    let validity = key.key_validity_period();
+
+                    if validity.is_none() {
+                        debug!("Certificate was rejected: The primary key or a subkey has validity period of zero");
+                        return Err(SpecialErrors::KeyNonExpiring)?
+                    } else if validity > Some(max_validity) {
+                        debug!("Certificate was rejected: The primary key or a subkey has a validity period greater than {max_validity_setting} seconds");
+                        return Err(SpecialErrors::KeyValidityTooLong)?
+                    }
+                }
+            }
+        }
     }
+
+    Ok(validcert)
 }
 
 pub fn encode_local(local: &str) -> String {

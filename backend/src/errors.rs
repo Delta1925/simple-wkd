@@ -56,6 +56,10 @@ pub enum SpecialErrors {
     MissingFile,
     #[error("User email rejected: domain not allowed")]
     UnallowedDomain,
+    #[error("The primary key or a subkey does not expire")]
+    KeyNonExpiring,
+    #[error("The primary keys or a subkeys validity is too long")]
+    KeyValidityTooLong,
 }
 
 #[derive(Debug)]
@@ -104,6 +108,8 @@ impl ResponseError for CompatErr {
                 SpecialErrors::MalformedEmail => StatusCode::BAD_REQUEST,
                 SpecialErrors::MissingFile => StatusCode::NOT_FOUND,
                 SpecialErrors::UnallowedDomain => StatusCode::UNAUTHORIZED,
+                SpecialErrors::KeyNonExpiring => StatusCode::BAD_REQUEST,
+                SpecialErrors::KeyValidityTooLong => StatusCode::BAD_REQUEST,
             },
         }
     }

@@ -18,6 +18,7 @@ pub struct Settings {
     pub bind_host: String,
     pub external_url: Url,
     pub mail_settings: MailSettings,
+    pub policy: Option<Policy>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,6 +30,11 @@ pub struct MailSettings {
     pub smtp_tls: SMTPEncryption,
     pub mail_from: String,
     pub mail_subject: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Policy {
+    pub key_max_validity: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
