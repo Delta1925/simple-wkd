@@ -14,3 +14,6 @@ smtp_port = 465
 smtp_tls = "Tls"
 mail_from = "key-submission@example.org"
 mail_subject = "Please confirm to %a your public key"
+
+[policy]
+key_max_validity = 0
