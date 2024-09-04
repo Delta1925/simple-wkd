@@ -17,6 +17,7 @@ use log::debug;
 use log::error;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sequoia_openpgp::cert::ValidCert;
+use sequoia_openpgp::cert::amalgamation::ValidateAmalgamation;
 use sequoia_openpgp::serialize::Marshal;
 use sequoia_openpgp::types::HashAlgorithm;
 use sequoia_openpgp::{parse::Parse, Cert};
@@ -31,6 +32,13 @@ pub fn validate_cert(cert: &Cert) -> Result<ValidCert> {
         Ok(validcert) => validcert,
         Err(_) => Err(SpecialErrors::InvalidCert)?,
     };
+
+    for key in cert.keys().subkeys() {
+        match log_err!(key.with_policy(&*POLICY, None), debug) {
+            Ok(_) => continue,
+            Err(_) => Err(SpecialErrors::KeyPolicyViolation)?,
+        }
+    }
 
     if let Some(policy_settings) = &SETTINGS.policy {
         if let Some(max_validity_setting) = policy_settings.key_max_validity {

@@ -44,7 +44,7 @@ pub enum SpecialErrors {
     ExpiredRequest,
     #[error("The key for the requested user does not exist!")]
     InexistingUser,
-    #[error("The key is either expired or uses an obsolete cipher!")]
+    #[error("The primary key is either expired or uses an obsolete cipher!")]
     InvalidCert,
     #[error("Error while sending email")]
     MailErr,
@@ -60,6 +60,8 @@ pub enum SpecialErrors {
     KeyNonExpiring,
     #[error("The primary keys or a subkeys validity is too long")]
     KeyValidityTooLong,
+    #[error("A subkey is either expired or uses an obsolete cipher!")]
+    KeyPolicyViolation,
 }
 
 #[derive(Debug)]
@@ -110,6 +112,7 @@ impl ResponseError for CompatErr {
                 SpecialErrors::UnallowedDomain => StatusCode::UNAUTHORIZED,
                 SpecialErrors::KeyNonExpiring => StatusCode::BAD_REQUEST,
                 SpecialErrors::KeyValidityTooLong => StatusCode::BAD_REQUEST,
+                SpecialErrors::KeyPolicyViolation => StatusCode::BAD_REQUEST,
             },
         }
     }
