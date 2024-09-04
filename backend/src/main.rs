@@ -11,7 +11,7 @@ use crate::management::{clean_stale, store_pending_addition, store_pending_delet
 use crate::settings::{ROOT_FOLDER, SETTINGS};
 use crate::utils::{
     gen_random_token, get_email_from_cert, is_email_allowed, key_exists, parse_pem, read_file,
-    return_outcome,
+    return_outcome, validate_cert
 };
 
 use actix_files::Files;
@@ -102,7 +102,7 @@ async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
 #[post("/api/submit")]
 async fn submit(pem: web::Form<Key>) -> Result<HttpResponse, CompatErr> {
     let cert = parse_pem(&pem.key)?;
-    let validcert = validate_cert!(cert)?;
+    let validcert = validate_cert(&cert)?;
     if validcert.is_tsk() {
         Err(SpecialErrors::ContainsSecret)?
     }

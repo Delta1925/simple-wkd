@@ -24,14 +24,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[macro_export]
-macro_rules! validate_cert {
-    ( $x:expr ) => {
-        match log_err!($x.with_policy($crate::settings::POLICY, None), debug) {
-            Ok(validcert) => Ok(validcert),
-            Err(_) => Err($crate::errors::SpecialErrors::InvalidCert),
-        }
-    };
+pub fn validate_cert(cert: &Cert) -> Result<ValidCert> {
+    match log_err!(cert.with_policy(crate::settings::POLICY, None), debug) {
+        Ok(validcert) => Ok(validcert),
+        Err(_) => Err(SpecialErrors::InvalidCert)?,
+    }
 }
 
 pub fn encode_local(local: &str) -> String {
@@ -106,7 +103,7 @@ pub fn parse_pem(pemfile: &str) -> Result<Cert> {
         Ok(cert) => cert,
         Err(_) => Err(SpecialErrors::MalformedCert)?,
     };
-    validate_cert!(cert)?;
+    validate_cert(&cert)?;
     Ok(cert)
 }
 
