@@ -30,13 +30,19 @@ use std::{
 pub fn validate_cert(cert: &Cert) -> Result<ValidCert> {
     let validcert = match log_err!(cert.with_policy(&*POLICY, None), debug) {
         Ok(validcert) => validcert,
-        Err(_) => Err(SpecialErrors::InvalidCert)?,
+        Err(e) => {
+            debug!("Certificate was rejected: The primary key violates the policy: {}", e.source().unwrap());
+            Err(SpecialErrors::InvalidCert)?
+       }
     };
 
     for key in cert.keys().subkeys() {
         match log_err!(key.with_policy(&*POLICY, None), debug) {
             Ok(_) => continue,
-            Err(_) => Err(SpecialErrors::KeyPolicyViolation)?,
+            Err(e) => {
+                debug!("Certificate was rejected: A sub key violates the policy: {}", e.source().unwrap());
+                Err(SpecialErrors::KeyPolicyViolation)?
+            }
         }
     }
 
