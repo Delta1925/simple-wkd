@@ -80,7 +80,16 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn index(req: HttpRequest) -> Result<HttpResponse, CompatErr> {
-    let path = webpage_path().join(req.match_info().query("filename"));
+    let base_path = webpage_path();
+    let filename = req.match_info().query("filename");
+    let path = base_path.join(filename);
+    let canonical_path = path.canonicalize().map_err(|e| {
+        error!("Error while canonicalizing path: {}", e);
+        CompatErr::from(SpecialErrors::InvalidPath)
+    })?;
+    if !canonical_path.starts_with(base_path) {
+        return Err(CompatErr::from(SpecialErrors::AccessDenied));
+    }
     for file in &["", "index.html"] {
         let path = if file.is_empty() {
             path.to_owned()
