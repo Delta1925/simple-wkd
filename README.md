@@ -1,3 +1,8 @@
+> **⚠️ This repository is no longer maintained**  
+>
+> I created this project to learn something new, but I currently don't have enough time to maintain it. Although I might begin maintaining it again at some point in the future, it will be archived for now.
+
+---
 
 # Simple WKD
 
